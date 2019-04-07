@@ -2,13 +2,22 @@ cmake_minimum_required(VERSION 3.7)
 
 project(Arkanoid LANGUAGES C)
 
+include_directories(${PROJECT_NAME}/headers)
+include_directories(${PROJECT_NAME}/sources)
+include_directories(${PROJECT_NAME}/public)
+
 IF (MSVC)
 	set (CMAKE_PREFIX_PATH "c:/sdl2")
 ENDIF()
 
 find_package(SDL2 REQUIRED)
 
-add_executable(${PROJECT_NAME} "")
+add_executable(${PROJECT_NAME}
+    "./arkanoid.c";
+    "./headers/ball.h"
+    "./sources/ball.c"
+    )
+
 target_sources(${PROJECT_NAME} PUBLIC arkanoid.c)
 target_include_directories(${PROJECT_NAME} PUBLIC ${SDL2_INCLUDE_DIRS})
 target_link_libraries(${PROJECT_NAME} PUBLIC ${SDL2_LIBRARIES})

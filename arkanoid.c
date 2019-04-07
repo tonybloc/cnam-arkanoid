@@ -2,9 +2,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include "./headers/ball.h"
 
 //struct { double x; double y; } ball_speed;
-struct { double x; double y;  double vx; double vy;} ball;
+Ball ball;
 
 Uint64 prev, now; // timers
 double delta_t;  // durée frame en ms
@@ -25,11 +26,12 @@ void init()
 	win_surf = SDL_GetWindowSurface(pWindow);
 	plancheSprites = SDL_LoadBMP("./sprites.bmp");
 	SDL_SetColorKey(plancheSprites, true, 0);  // 0: 00/00/00 noir -> transparent
+    initializeBall(&ball, 0, 0, 0, 0);
 
-	ball.x = win_surf->w / 2;
-	ball.y = win_surf->h / 2;
-	ball.vx = 1.0;
-	ball.vy = 1.4;
+    ball.m_x = win_surf->w / 2;
+    ball.m_y = win_surf->h / 2;
+    ball.m_vx = 1.0;
+    ball.m_vy = 1.4;
 }
 
 
@@ -48,24 +50,24 @@ void draw()
 
 	
 	// affiche balle
-	SDL_Rect dstBall = {ball.x, ball.y, 0, 0};
+    SDL_Rect dstBall = {ball.m_x, ball.m_y, 0, 0};
 	SDL_BlitSurface(plancheSprites, &srcBall, win_surf, &dstBall);
 
 	// dedplacement
-	ball.x += ball.vx / delta_t;
-	ball.y += ball.vy / delta_t;
+    ball.m_x += ball.m_vx / delta_t;
+    ball.m_y += ball.m_vy / delta_t;
 
 	// collision bord
-	if ((ball.x < 1) || (ball.x > (win_surf->w - 25)))
-		ball.vx *= -1;
-	if ((ball.y < 1) || (ball.y > (win_surf->h - 25)))
-		ball.vy *= -1;
+    if ((ball.m_x < 1) || (ball.m_x > (win_surf->w - 25)))
+        ball.m_vx *= -1;
+    if ((ball.m_y < 1) || (ball.m_y > (win_surf->h - 25)))
+        ball.m_vy *= -1;
 
 	// touche bas -> rouge
-	if (ball.y >(win_surf->h - 25))
+    if (ball.m_y >(win_surf->h - 25))
 		srcBall.y = 64;
 	// touche bas -> vert
-	if (ball.y < 1)
+    if (ball.m_y < 1)
 		srcBall.y = 96;
 
 	// vaisseau
