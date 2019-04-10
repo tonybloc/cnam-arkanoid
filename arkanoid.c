@@ -12,35 +12,35 @@ Ship ship;
 Uint64 prev, now; // timers
 double delta_t;  // durée frame en ms
 
-SDL_Window* pWindow = NULL;
-SDL_Surface* win_surf = NULL;
-SDL_Surface* default_sprites = NULL; // default sprite
-SDL_Surface* sprite = NULL; // all sprite
-SDL_Surface* surfAlphabet = NULL;
+SDL_Window* winArkanoid = NULL;
+SDL_Surface* surfWindow = NULL;
+SDL_Surface* surfDefaultSprites = NULL; // default sprite
+SDL_Surface* surfAdvancedSprites = NULL; // all sprite
+SDL_Surface* surfAlphabetSprites = NULL;
 
 //SDL_Rect srcBg = { 0,128, 96,128 }; // x,y, w,h (0,0) en haut a gauche
-SDL_Rect srcBg = { 64,128, 64,64 }; // x,y, w,h (0,0) en haut a gauche
+SDL_Rect rectBackground = { 64,128, 64,64 }; // x,y, w,h (0,0) en haut a gauche
 
 
 void init()
 {
     // initialize window
-    pWindow = SDL_CreateWindow("Arknoid", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 600, 600, SDL_WINDOW_SHOWN);
+    winArkanoid = SDL_CreateWindow("Arknoid", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 600, 600, SDL_WINDOW_SHOWN);
 
-	win_surf = SDL_GetWindowSurface(pWindow);
+    surfWindow = SDL_GetWindowSurface(winArkanoid);
 
     // load sprites
-    default_sprites = SDL_LoadBMP("./public/sprites.bmp");
-    sprite = SDL_LoadBMP("./public/Arkanoid_sprites.bmp");
-    //surfAlphabet = SDL_LoadBMP("./public/Arkanoid_ascii.bmp");
+    surfDefaultSprites = SDL_LoadBMP("./public/sprites.bmp");
+    surfAdvancedSprites = SDL_LoadBMP("./public/Arkanoid_sprites.bmp");
+    surfAlphabetSprites = SDL_LoadBMP("./public/Arkanoid_ascii.bmp");
 
-    SDL_SetColorKey(default_sprites, true, 0);  // 0: 00/00/00 noir -> transparent
+    SDL_SetColorKey(surfDefaultSprites, true, 0);  // 0: 00/00/00 noir -> transparent
 
     initializeBall(&ball);
     initializeShip(&ship);
 
     ship.m_x = 0;
-    ship.m_y = win_surf->h - 32;
+    ship.m_y = surfWindow->h - 32;
     ship.m_vx = 0;
     ship.m_vy = 0;
     ship.m_src.x = 128;
@@ -48,10 +48,10 @@ void init()
     ship.m_src.w = 128;
     ship.m_src.h = 32;
 
-    ball.m_x = ship.m_x + (ship.m_src.x/2);
+    ball.m_x = ship.m_x + (ship.m_src.x/2) - 12.5;
     ball.m_y = ship.m_y - 25;
     ball.m_vx = 1.0;
-    ball.m_vy = 3;
+    ball.m_vy = 6;
     ball.m_src.x = 0;
     ball.m_src.y = 96;
     ball.m_src.w = 24;
@@ -66,12 +66,12 @@ void draw()
 {
 	// remplit le fond 
     SDL_Rect dest = { 0.0, 0.0, 0.0, 0.0 };
-    for (int j = 0; j < win_surf->h; j+=64)
-        for (int i = 0; i < win_surf->w; i += 64)
+    for (int j = 0; j < surfWindow->h; j+=64)
+        for (int i = 0; i < surfWindow->w; i += 64)
         {
 			dest.x = i;
 			dest.y = j;
-            if(SDL_BlitSurface(sprite, &srcBg, win_surf, &dest) != 0)
+            if(SDL_BlitSurface(surfAdvancedSprites, &rectBackground, surfWindow, &dest) != 0)
             {
                 // display error on console
                 fprintf(stderr, "Erreur lors de l'affichage du background : %s\n", SDL_GetError());
@@ -84,7 +84,7 @@ void draw()
 	// affiche balle
 
     SDL_Rect dstBall = {ball.m_x, ball.m_y, 0, 0};
-    if(SDL_BlitSurface(default_sprites, &ball.m_src, win_surf, &dstBall) != 0)
+    if(SDL_BlitSurface(surfDefaultSprites, &ball.m_src, surfWindow, &dstBall) != 0)
     {
         // display error on console
         fprintf(stderr, "Erreur lors de l'affichage de la ball : %s\n", SDL_GetError());
@@ -101,16 +101,16 @@ void draw()
 
     double y = ball.m_y + ball.m_src.h;
 	// collision bord
-    if ((ball.m_x < 1) || (ball.m_x > (win_surf->w - 25)))
+    if ((ball.m_x < 1) || (ball.m_x > (surfWindow->w - 25)))
         ball.m_vx *= -1;
-    if ( (ball.m_y < 1) || (ball.m_y > (win_surf->h - 25))
+    if ( (ball.m_y < 1) || (ball.m_y > (surfWindow->h - 25))
          || ( (ball.m_x >= ship.m_x) && (ball.m_x <= ship.m_x + ship.m_src.w) && (y >= ship.m_y) && (y <= ship.m_y + ship.m_src.h) )
          )
         ball.m_vy *= -1;
 
 
 	// touche bas -> rouge
-    if (ball.m_y >(win_surf->h - 25))
+    if (ball.m_y >(surfWindow->h - 25))
         ball.m_src.y = 64;
 	// touche bas -> vert
     if (ball.m_y < 1)
@@ -122,11 +122,11 @@ void draw()
     dest.y = ship.m_y;
     if(ball.isLaunch == 0)
     {
-        ball.m_x = ship.m_x + (ship.m_src.x/2);
+        ball.m_x = ship.m_x + (ship.m_src.x/2) - 12.5;
         ball.m_y = ship.m_y - 25;
     }
 
-    if(SDL_BlitSurface(default_sprites, &ship.m_src, win_surf, &dest) != 0)
+    if(SDL_BlitSurface(surfDefaultSprites, &ship.m_src, surfWindow, &dest) != 0)
     {
         // display error on console
         fprintf(stderr, "Erreur lors de l'affichage du vaisseaux : %s\n", SDL_GetError());
@@ -186,7 +186,7 @@ int main(int argc, char** argv)
         draw();
 
         // Update surface for display sprites
-        if(SDL_UpdateWindowSurface(pWindow) != 0)
+        if(SDL_UpdateWindowSurface(winArkanoid) != 0)
         {
             // display error on console
             fprintf(stderr, "Erreur lors de l'update de la surface : %s\n", SDL_GetError());
@@ -194,13 +194,13 @@ int main(int argc, char** argv)
         }
 
 	}
-    SDL_FreeSurface(win_surf);
-    SDL_FreeSurface(default_sprites);
-    SDL_FreeSurface(sprite);
-    SDL_FreeSurface(surfAlphabet);
+    SDL_FreeSurface(surfWindow);
+    SDL_FreeSurface(surfDefaultSprites);
+    SDL_FreeSurface(surfAdvancedSprites);
+    SDL_FreeSurface(surfAlphabetSprites);
 
 
-    SDL_DestroyWindow(pWindow);
+    SDL_DestroyWindow(winArkanoid);
     SDL_Quit();
 
     return EXIT_SUCCESS;
