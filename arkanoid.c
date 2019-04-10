@@ -11,7 +11,6 @@ Ship ship;
 
 Uint64 prev, now; // timers
 double delta_t;  // durée frame en ms
-int x_vault;
 
 SDL_Window* pWindow = NULL;
 SDL_Surface* win_surf = NULL;
@@ -21,9 +20,6 @@ SDL_Surface* surfAlphabet = NULL;
 
 //SDL_Rect srcBg = { 0,128, 96,128 }; // x,y, w,h (0,0) en haut a gauche
 SDL_Rect srcBg = { 64,128, 64,64 }; // x,y, w,h (0,0) en haut a gauche
-SDL_Rect srcBall = { 0,96,24,24 };
-SDL_Rect scrVaiss = { 128,0,128,32 };
-
 
 
 void init()
@@ -43,19 +39,7 @@ void init()
     initializeBall(&ball);
     initializeShip(&ship);
 
-
-    ball.m_x = win_surf->w / 2;
-    ball.m_y = win_surf->h - 25;
-    ball.m_vx = 1.0;
-    ball.m_vy = 1.4;
-    ball.m_src.x = 0;
-    ball.m_src.y = 96;
-    ball.m_src.w = 24;
-    ball.m_src.h = 24;
-
-    x_vault = 0;
-
-    ship.m_x = x_vault;
+    ship.m_x = 0;
     ship.m_y = win_surf->h - 32;
     ship.m_vx = 0;
     ship.m_vy = 0;
@@ -63,6 +47,17 @@ void init()
     ship.m_src.y = 0;
     ship.m_src.w = 128;
     ship.m_src.h = 32;
+
+    ball.m_x = ship.m_x + (ship.m_src.x/2);
+    ball.m_y = ship.m_y - 25;
+    ball.m_vx = 1.0;
+    ball.m_vy = 3;
+    ball.m_src.x = 0;
+    ball.m_src.y = 96;
+    ball.m_src.w = 24;
+    ball.m_src.h = 24;
+
+
 }
 
 
@@ -70,7 +65,7 @@ void init()
 void draw()
 {
 	// remplit le fond 
-	SDL_Rect dest = { 0,0,0,0 };
+    SDL_Rect dest = { 0.0, 0.0, 0.0, 0.0 };
     for (int j = 0; j < win_surf->h; j+=64)
         for (int i = 0; i < win_surf->w; i += 64)
         {
@@ -87,36 +82,51 @@ void draw()
 
 	
 	// affiche balle
+
     SDL_Rect dstBall = {ball.m_x, ball.m_y, 0, 0};
-    if(SDL_BlitSurface(default_sprites, &srcBall, win_surf, &dstBall) != 0)
+    if(SDL_BlitSurface(default_sprites, &ball.m_src, win_surf, &dstBall) != 0)
     {
         // display error on console
         fprintf(stderr, "Erreur lors de l'affichage de la ball : %s\n", SDL_GetError());
         exit(EXIT_FAILURE);
     }
 
-	// dedplacement
-    ball.m_x += ball.m_vx / delta_t;
-    ball.m_y += ball.m_vy / delta_t;
+    if(ball.isLaunch == 1)
+    {
+        // dedplacement
+        ball.m_x += ball.m_vx / delta_t;
+        ball.m_y += ball.m_vy / delta_t;
+    }
 
+
+    double y = ball.m_y + ball.m_src.h;
 	// collision bord
     if ((ball.m_x < 1) || (ball.m_x > (win_surf->w - 25)))
         ball.m_vx *= -1;
-    if ((ball.m_y < 1) || (ball.m_y > (win_surf->h - 25)) || (ball.m_y < (scrVaiss.y - 25)))
+    if ( (ball.m_y < 1) || (ball.m_y > (win_surf->h - 25))
+         || ( (ball.m_x >= ship.m_x) && (ball.m_x <= ship.m_x + ship.m_src.w) && (y >= ship.m_y) && (y <= ship.m_y + ship.m_src.h) )
+         )
         ball.m_vy *= -1;
 
 
 	// touche bas -> rouge
     if (ball.m_y >(win_surf->h - 25))
-		srcBall.y = 64;
+        ball.m_src.y = 64;
 	// touche bas -> vert
     if (ball.m_y < 1)
-		srcBall.y = 96;
+        ball.m_src.y = 96;
 
 	// vaisseau
+
     dest.x = ship.m_x;
     dest.y = ship.m_y;
-    if(SDL_BlitSurface(default_sprites, &scrVaiss, win_surf, &dest) != 0)
+    if(ball.isLaunch == 0)
+    {
+        ball.m_x = ship.m_x + (ship.m_src.x/2);
+        ball.m_y = ship.m_y - 25;
+    }
+
+    if(SDL_BlitSurface(default_sprites, &ship.m_src, win_surf, &dest) != 0)
     {
         // display error on console
         fprintf(stderr, "Erreur lors de l'affichage du vaisseaux : %s\n", SDL_GetError());
@@ -158,6 +168,7 @@ int main(int argc, char** argv)
                     case SDLK_LEFT:  ship.m_x -= 10; break;
                     case SDLK_RIGHT: ship.m_x +=10; break;
 					case SDLK_ESCAPE: quit = true; break;
+                    case SDLK_SPACE : ball.isLaunch = 1;
 					default: break;
 				}
 				break;
@@ -171,7 +182,8 @@ int main(int argc, char** argv)
 		prev = now;
 		now = SDL_GetPerformanceCounter();
 		delta_t = (double)((now - prev) * 1000 / (double)SDL_GetPerformanceFrequency());
-		draw();
+
+        draw();
 
         // Update surface for display sprites
         if(SDL_UpdateWindowSurface(pWindow) != 0)

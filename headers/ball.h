@@ -4,7 +4,6 @@
 #include <SDL.h>
 #include <stdio.h>
 #include <stdlib.h>
-
 /**
  * @brief ball
  */
@@ -14,6 +13,7 @@ typedef struct Ball Ball;
  * @brief The Ball struct
  */
 struct Ball{
+    int isLaunch;
     double m_x;
     double m_y;
     double m_vx;

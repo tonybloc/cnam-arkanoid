@@ -28,4 +28,5 @@ struct Ship
  */
 void initializeShip(Ship* ship);
 
+
 #endif

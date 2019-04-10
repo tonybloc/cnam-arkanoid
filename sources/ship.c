@@ -11,3 +11,4 @@ void initializeShip(Ship* s){
     s->m_src.x = 0;
     s->m_src.y = 0;
 }
+
