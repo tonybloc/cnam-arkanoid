@@ -15,15 +15,23 @@ find_package(SDL2 REQUIRED)
 add_executable(${PROJECT_NAME}
     "./arkanoid.c";
     "./headers/ball.h"
+    "./headers/ship.h"
+    "./headers/brick.h"
     "./sources/ball.c"
+    "./sources/brick.c"
+    "./sources/ship.c"
     )
 
 target_sources(${PROJECT_NAME} PUBLIC arkanoid.c)
 target_include_directories(${PROJECT_NAME} PUBLIC ${SDL2_INCLUDE_DIRS})
 target_link_libraries(${PROJECT_NAME} PUBLIC ${SDL2_LIBRARIES})
 
-file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/sprites.bmp
-	DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/)	
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/public/sprites.bmp
+        DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/public)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/public/Arkanoid_sprites.bmp
+        DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/public)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/public/Arkanoid_ascii.bmp
+        DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/public)
 
 IF (MSVC)
 	file(COPY ${SDL2_LIBDIR}/SDL2.dll

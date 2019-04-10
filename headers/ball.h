@@ -1,6 +1,9 @@
 #ifndef BALL_H
-
 #define BALL_H
+
+#include <SDL.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 /**
  * @brief ball
@@ -15,6 +18,7 @@ struct Ball{
     double m_y;
     double m_vx;
     double m_vy;
+    SDL_Rect m_src;
 };
 
 /**
@@ -25,6 +29,6 @@ struct Ball{
  * @param vx : speed x
  * @param vy : speed y
  */
-void initializeBall(Ball* b, double x, double y, double vx, double vy);
+void initializeBall(Ball* b);
 
 #endif

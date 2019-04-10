@@ -1,7 +1,8 @@
-#include "./../headers/ball.h"
+#include "./../headers/brick.h"
 
 
-void initializeBall(Ball* b){
+
+void initializeBrick(Brick* b){
     b->m_x = 0.0;
     b->m_y = 0.0;
     b->m_vx = 0.0;
