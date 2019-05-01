@@ -17,9 +17,14 @@ add_executable(${PROJECT_NAME}
     "./headers/ball.h"
     "./headers/ship.h"
     "./headers/brick.h"
+    "./headers/gui_brick.h"
+    "./headers/round.h"
     "./sources/ball.c"
     "./sources/brick.c"
     "./sources/ship.c"
+    "./sources/gui_brick.c"
+    "./sources/round.c"
+
     )
 
 target_sources(${PROJECT_NAME} PUBLIC arkanoid.c)
