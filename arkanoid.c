@@ -1,207 +1,573 @@
-#include <SDL.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdbool.h>
+#include "./headers/lib.h"
 #include "./headers/ball.h"
 #include "./headers/ship.h"
+#include "./headers/config.h"
+#include "./headers/color.h"
+#include "./headers/menu.h"
+
+#define HEIGHT 600
+#define WIDTH 600
+#define HEIGHT_CENTER HEIGHT/2
+#define WIDTH_CENTER WIDTH/2
+#define HEIGHT_QUARTER HEIGHT/4
+#define WIDTH_QUARTER WIDTH/4
+
+#define NUMBER_OF_MENU 4
 
 //struct { double x; double y; } ball_speed;
-Ball ball;
-Ship ship;
 
-Uint64 prev, now; // timers
-double delta_t;  // durée frame en ms
+/* Constant */
 
-SDL_Window* winArkanoid = NULL;
-SDL_Surface* surfWindow = NULL;
-SDL_Surface* surfDefaultSprites = NULL; // default sprite
-SDL_Surface* surfAdvancedSprites = NULL; // all sprite
-SDL_Surface* surfAlphabetSprites = NULL;
+/* Enumeration */
+enum ARKANOID_WINDOW_OPTION { WINDOW_MENU = 1, WINDOW_BOARD = 2, WINDOW_QUIT = 3, WINDOW_SCORES = 4, WINDOW_ABOUT = 5};
 
-//SDL_Rect srcBg = { 0,128, 96,128 }; // x,y, w,h (0,0) en haut a gauche
-SDL_Rect rectBackground = { 64,128, 64,64 }; // x,y, w,h (0,0) en haut a gauche
+/* Global Variable */
+static Ball ball;           // Ball
+static Ship ship;           // Ship
+static Uint64 prev, now;    // timers
+static double delta_t;      // refresh frame (ms)
+
+static enum ARKANOID_WINDOW_OPTION WindowBehavior = WINDOW_MENU;
 
 
-void init()
+/* Arkanoid Window */
+static SDL_Window* Arkanoid_Window = NULL;
+static SDL_Surface* Arkanoid_Surface = NULL;
+
+/* Background */
+static SDL_Rect rectBackground = { 0,128, 48,64 };  // x,y, w,h (0,0) en haut a gauche
+
+
+
+
+/* Prototype */
+void Arkanoid_ShowMenu(SDL_Window* win, SDL_Surface** rend);
+void Arkanoid_ShowBoard(SDL_Window* win, SDL_Surface** rend);
+void Arkanoid_ShowAbout(SDL_Window* window, SDL_Surface** surface);
+void Arkanoid_ShowHighScores(SDL_Window* window, SDL_Surface** surface);
+void Arkanoid_DrawBoard(SDL_Surface* surface, SDL_Surface* advancedSprites);
+
+
+/* Main */
+int main(int argc, char* argv[])
 {
-    // initialize window
-    winArkanoid = SDL_CreateWindow("Arknoid", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 600, 600, SDL_WINDOW_SHOWN);
+    // initialize SDL : video, audio
+    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) != 0 )
+    {
+        SDL_Log("Erreur : La SDL n'a pas été initialisée : %s \n", SDL_GetError());
+        SDL_Log("Line : %d, File : %s, Function : %s \n", __LINE__, __FILE__, __FUNCTION__);
+        goto Redirection_Quit ;
+    }
 
-    surfWindow = SDL_GetWindowSurface(winArkanoid);
+    // Load Window
+    Arkanoid_Window = Arkanoid_LoadNewWindow(HEIGHT, WIDTH);
+    if(Arkanoid_Window == NULL)
+    {
+        SDL_Log("Erreur : La Fenêtre n'a pas été chargée : %s \n", SDL_GetError());
+        SDL_Log("Line : %d, File : %s, Function : %s \n", __LINE__, __FILE__, __FUNCTION__);
+        goto Redirection_Quit ;
+    }
 
-    // load sprites
-    surfDefaultSprites = SDL_LoadBMP("./public/sprites.bmp");
-    surfAdvancedSprites = SDL_LoadBMP("./public/Arkanoid_sprites.bmp");
-    surfAlphabetSprites = SDL_LoadBMP("./public/Arkanoid_ascii.bmp");
+    while(WindowBehavior != WINDOW_QUIT)
+    {
+        switch(WindowBehavior)
+        {
+            case WINDOW_MENU:
+                Arkanoid_ShowMenu(Arkanoid_Window, &Arkanoid_Surface);
+                break;
+            case WINDOW_BOARD:
+                Arkanoid_ShowBoard(Arkanoid_Window, &Arkanoid_Surface);
+                break;            
+            case WINDOW_ABOUT:
+                Arkanoid_ShowAbout(Arkanoid_Window, &Arkanoid_Surface);
+                break;
+            case WINDOW_SCORES:
+                Arkanoid_ShowHighScores(Arkanoid_Window, &Arkanoid_Surface);
+                break;
+            case WINDOW_QUIT:
+                break;
 
-    SDL_SetColorKey(surfDefaultSprites, true, 0);  // 0: 00/00/00 noir -> transparent
+        }
+    }
+
+    Redirection_Quit:
+    SDL_FreeSurface(Arkanoid_Surface);
+    SDL_DestroyWindow(Arkanoid_Window);
+    SDL_Quit();
+
+    return EXIT_SUCCESS;
+}
+
+
+/* Windows behaviors */
+void Arkanoid_ShowMenu(SDL_Window* window, SDL_Surface** surface)
+{
+    *surface = NULL;
+    SDL_Surface* advancedSprite = NULL;
+    SDL_Surface* alphabetSprite = NULL;
+
+    *surface = SDL_GetWindowSurface(window);
+    if(surface == NULL)
+    {
+        SDL_Log("Erreur : La Surface n'a pas été récupérée : %s \n", SDL_GetError());
+        SDL_Log("Line : %d, File : %s, Function : %s \n", __LINE__, __FILE__, __FUNCTION__);
+        goto Redirection_Quit ;
+    }
+
+    // Load sprites
+    alphabetSprite = SDL_LoadBMP("./public/Arkanoid_ascii.bmp");
+    advancedSprite = SDL_LoadBMP("./public/Arkanoid_sprites.bmp");
+
+    if(advancedSprite == NULL || alphabetSprite == NULL)
+    {
+        SDL_Log("Erreur : Le sprite n'a pas été chargée : %s \n", SDL_GetError());
+        SDL_Log("Line : %d, File : %s, Function : %s \n", __LINE__, __FILE__, __FUNCTION__);
+        goto Redirection_Quit ;
+    }
+
+    // Transparancy
+    SDL_SetColorKey(alphabetSprite, true, 0);
+    SDL_SetColorKey(advancedSprite, true, 0);
+
+
+    enum MENU_ITEMS { NEW_GAME = 0, HIGH_SCORES = 1, ABOUT = 2, EXIT = 3 };
+
+    char* MenuLabels[NUMBER_OF_MENU] = {"New Game", "High Score", "About", "Exit"};
+
+    SDL_Rect MenuPositionOfSelectors[NUMBER_OF_MENU] = {
+        {(int)(WIDTH_QUARTER*1.5)-32, WIDTH_QUARTER+00, 32, 32},
+        {(int)(WIDTH_QUARTER*1.5)-32, WIDTH_QUARTER+32, 32, 32},
+        {(int)(WIDTH_QUARTER*1.5)-32, WIDTH_QUARTER+64, 32, 32},
+        {(int)(WIDTH_QUARTER*1.5)-32, WIDTH_QUARTER+96, 32, 32}
+    };
+
+    // initialize Menu surfaces selectors
+    SDL_Surface* MenuSurfaceOfSelectors[NUMBER_OF_MENU] = {NULL};
+    for (int i = 0; i < NUMBER_OF_MENU; i++)
+        MenuSurfaceOfSelectors[i] = SDL_CreateRGBSurface(0, 32, 32, 32,0,0,0,0);
+
+
+    // Print title of surface
+    Arkanoid_PrintAlphaNumeric(*surface, alphabetSprite, "Arkanoid",(int)(WIDTH_QUARTER*1.5),20);
+
+
+    for(int index = 0; index < NUMBER_OF_MENU; index++)
+    {
+        // Initialize position of selectors
+        Arkanoid_PrintAlphaNumeric(MenuSurfaceOfSelectors[index], alphabetSprite, " ", 0,0);
+        SDL_BlitSurface(MenuSurfaceOfSelectors[index], NULL, *surface, &(MenuPositionOfSelectors[index]));
+
+        // Print menus's labels
+        Arkanoid_PrintAlphaNumeric(*surface, alphabetSprite, MenuLabels[index], (int)(WIDTH_QUARTER*1.5), HEIGHT_QUARTER+(index*32));
+    }
+
+    int indexSelected = 0;
+
+    // Print current selectors
+    Arkanoid_PrintAlphaNumeric(MenuSurfaceOfSelectors[indexSelected], alphabetSprite, "*", 0,0);
+    SDL_BlitSurface(MenuSurfaceOfSelectors[indexSelected], NULL, *surface, &(MenuPositionOfSelectors[indexSelected]));
+
+    SDL_UpdateWindowSurface(window);
+
+
+    SDL_bool laucher = SDL_TRUE;
+
+    // Events behaviors
+    while(laucher)
+    {
+        SDL_Event event;
+        while(SDL_PollEvent(&event))
+        {
+            switch(event.type)
+            {
+                case SDL_QUIT:
+                    laucher = SDL_FALSE;
+                    WindowBehavior = WINDOW_QUIT;
+                    break;
+                case SDL_KEYDOWN:
+                    switch (event.key.keysym.sym)
+                    {
+                        case SDLK_ESCAPE:
+                            laucher = SDL_FALSE;
+                            WindowBehavior = WINDOW_QUIT;
+                            break;
+                        case SDLK_UP:
+                            // remove current selector
+                            SDL_FillRect(MenuSurfaceOfSelectors[indexSelected], NULL, 0x000000);
+                            SDL_BlitSurface(MenuSurfaceOfSelectors[indexSelected], NULL, *surface, &(MenuPositionOfSelectors[indexSelected]));
+
+                            // set new selected index
+                            indexSelected = ((indexSelected-1) < 0) ? NUMBER_OF_MENU-1 :(indexSelected-1);
+
+                            // print new current selector
+                            Arkanoid_PrintAlphaNumeric(MenuSurfaceOfSelectors[indexSelected], alphabetSprite, "*", 0,0);
+                            SDL_BlitSurface(MenuSurfaceOfSelectors[indexSelected], NULL, *surface, &(MenuPositionOfSelectors[indexSelected]));
+                            break;
+                        case SDLK_DOWN:
+                            // remove current selector
+                            SDL_FillRect(MenuSurfaceOfSelectors[indexSelected], NULL, 0x000000);
+                            SDL_BlitSurface(MenuSurfaceOfSelectors[indexSelected], NULL, *surface, &(MenuPositionOfSelectors[indexSelected]));
+
+                            // set new selected index
+                            indexSelected = ((indexSelected+1) > NUMBER_OF_MENU-1) ? 0 :(indexSelected+1);
+
+                            // print next current selector
+                            Arkanoid_PrintAlphaNumeric(MenuSurfaceOfSelectors[indexSelected], alphabetSprite, "*", 0,0);
+                            SDL_BlitSurface(MenuSurfaceOfSelectors[indexSelected], NULL, *surface, &(MenuPositionOfSelectors[indexSelected]));
+                            break;
+                        case SDLK_RETURN:
+                            switch (indexSelected)
+                            {
+                                case NEW_GAME:
+                                    WindowBehavior = WINDOW_BOARD;
+                                    laucher = SDL_FALSE;
+                                    break;
+                                case HIGH_SCORES:
+                                    WindowBehavior = WINDOW_SCORES;
+                                    laucher = SDL_FALSE;
+                                    break;
+                                case ABOUT:
+                                    WindowBehavior = WINDOW_ABOUT;
+                                    laucher = SDL_FALSE;
+                                    break;
+                                case EXIT:
+                                    WindowBehavior = WINDOW_QUIT;
+                                    laucher = SDL_FALSE;
+                                    break;
+                                default:
+                                    break;
+                            }
+                        default:
+                            break;
+                    }
+                    break;
+                case SDL_MOUSEBUTTONDOWN:
+                    if(event.button.button == SDL_BUTTON_LEFT)
+                    {
+                        printf("Coordnnee du click : %d (X) /%d (Y)\n", event.button.x, event.button.y);
+                    }
+                    break;
+                default:
+                    break;
+            }
+            SDL_UpdateWindowSurface(window);
+        }
+    }
+
+    Redirection_Quit:
+    SDL_FillRect(*surface, NULL, 0x000000);
+    SDL_FreeSurface(*surface);
+    SDL_FreeSurface(alphabetSprite);
+    SDL_FreeSurface(advancedSprite);
+
+}
+void Arkanoid_ShowBoard(SDL_Window* window, SDL_Surface** surface)
+{
+    *surface = NULL;
+    SDL_Surface* advancedSprite = NULL;
+    SDL_Surface* alphabetSprite = NULL;
+
+    // define new surface for window
+    *surface = SDL_GetWindowSurface(window);
+    if(surface == NULL)
+    {
+        SDL_Log("Erreur : La Surface n'a pas été récupérée : %s \n", SDL_GetError());
+        SDL_Log("Line : %d, File : %s, Function : %s \n", __LINE__, __FILE__, __FUNCTION__);
+        goto Redirection_Quit ;
+    }
+
+
+    // Load sprites
+    alphabetSprite = SDL_LoadBMP("./public/Arkanoid_ascii.bmp");
+    advancedSprite = SDL_LoadBMP("./public/Arkanoid_sprites.bmp");
+
+    if(advancedSprite == NULL || alphabetSprite == NULL)
+    {
+        SDL_Log("Erreur : Le sprite n'a pas été chargée : %s \n", SDL_GetError());
+        SDL_Log("Line : %d, File : %s, Function : %s \n", __LINE__, __FILE__, __FUNCTION__);
+        goto Redirection_Quit ;
+    }
+
+    // Transparancy
+    SDL_SetColorKey(alphabetSprite, true, 0);
+    SDL_SetColorKey(advancedSprite, true, 0);
+
 
     initializeBall(&ball);
     initializeShip(&ship);
 
-    ship.m_x = 0;
-    ship.m_y = surfWindow->h - 32;
+
+    ship.m_src.x = 384;
+    ship.m_src.y = 128;
+    ship.m_src.w = 64;
+    ship.m_src.h = 16;
+    ship.m_x = ((*surface)->w/2) - (ship.m_src.w/2);
+    ship.m_y = (*surface)->h - 32;
     ship.m_vx = 0;
     ship.m_vy = 0;
-    ship.m_src.x = 128;
-    ship.m_src.y = 0;
-    ship.m_src.w = 128;
-    ship.m_src.h = 32;
 
-    ball.m_x = ship.m_x + (ship.m_src.x/2) - 12.5;
-    ball.m_y = ship.m_y - 25;
-    ball.m_vx = 1.0;
-    ball.m_vy = 6;
-    ball.m_src.x = 0;
-    ball.m_src.y = 96;
-    ball.m_src.w = 24;
-    ball.m_src.h = 24;
+
+    ball.m_src.x = 80;
+    ball.m_src.y = 64;
+    ball.m_src.w = 16;
+    ball.m_src.h = 16;
+    ball.m_x = ship.m_x + (ship.m_src.w/2) - (ball.m_src.w/2);
+    ball.m_y = ship.m_y - (ball.m_src.h);
+    ball.m_vx = 2.0;
+    ball.m_vy = 10;
+
+    // Events
+
+    SDL_bool gameLaucher = SDL_TRUE;
+
+    while(gameLaucher)
+    {
+        SDL_Event event;
+        while(SDL_PollEvent(&event))
+        {
+            switch(event.type)
+            {
+                case SDL_QUIT:
+                    gameLaucher = SDL_FALSE;
+                    break;
+                case SDL_KEYDOWN:
+                    switch (event.key.keysym.sym)
+                    {
+                        case SDLK_LEFT:
+                            ship.m_x -= 10;
+                            break;
+                        case SDLK_RIGHT:
+                            ship.m_x +=10;
+                            break;
+                        case SDLK_ESCAPE:
+                            gameLaucher = SDL_FALSE;
+                            WindowBehavior = WINDOW_MENU;
+                            break;
+                        case SDLK_SPACE :
+                            ball.isLaunch = 1;
+                            break;
+                        default: break;
+                    }
+                    break;
+                default:
+                    break;
+            }
+        }
+        prev = now;
+        now = SDL_GetPerformanceCounter();
+        delta_t = (double)( (now-prev) * 1000 / (double)SDL_GetPerformanceFrequency());
+        Arkanoid_DrawBoard(*surface, advancedSprite);
+        SDL_UpdateWindowSurface(window);
+    }
+
+    Redirection_Quit:
+    SDL_FillRect(*surface, NULL, 0x000000);
+    SDL_FreeSurface(*surface);
+    SDL_FreeSurface(alphabetSprite);
+    SDL_FreeSurface(advancedSprite);
 
 
 }
-
-
-// fonction qui met à jour la surface de la fenetre "win_surf"
-void draw()
+void Arkanoid_ShowAbout(SDL_Window* window, SDL_Surface** surface)
 {
-	// remplit le fond 
-    SDL_Rect dest = { 0.0, 0.0, 0.0, 0.0 };
-    for (int j = 0; j < surfWindow->h; j+=64)
-        for (int i = 0; i < surfWindow->w; i += 64)
-        {
-			dest.x = i;
-			dest.y = j;
-            if(SDL_BlitSurface(surfAdvancedSprites, &rectBackground, surfWindow, &dest) != 0)
-            {
-                // display error on console
-                fprintf(stderr, "Erreur lors de l'affichage du background : %s\n", SDL_GetError());
-                exit(EXIT_FAILURE);
-            }
+    *surface = NULL;
+    SDL_Surface* advancedSprite = NULL;
+    SDL_Surface* alphabetSprite = NULL;
 
-		}
-
-	
-	// affiche balle
-
-    SDL_Rect dstBall = {ball.m_x, ball.m_y, 0, 0};
-    if(SDL_BlitSurface(surfDefaultSprites, &ball.m_src, surfWindow, &dstBall) != 0)
-    {
-        // display error on console
-        fprintf(stderr, "Erreur lors de l'affichage de la ball : %s\n", SDL_GetError());
-        exit(EXIT_FAILURE);
+    // define new surface for window
+    *surface = SDL_GetWindowSurface(window);
+    if(surface == NULL){
+        SDL_Log("Erreur : La Surface n'a pas été récupérée : %s \n", SDL_GetError());
+        SDL_Log("Line : %d, File : %s, Function : %s \n", __LINE__, __FILE__, __FUNCTION__);
+        goto Redirection_Quit ;
     }
 
-    if(ball.isLaunch == 1)
+    // Load sprites
+    alphabetSprite = SDL_LoadBMP("./public/Arkanoid_ascii.bmp");
+    advancedSprite = SDL_LoadBMP("./public/Arkanoid_sprites.bmp");
+
+    if(advancedSprite == NULL || alphabetSprite == NULL)
     {
-        // dedplacement
+        SDL_Log("Erreur : Le sprite n'a pas été chargée : %s \n", SDL_GetError());
+        SDL_Log("Line : %d, File : %s, Function : %s \n", __LINE__, __FILE__, __FUNCTION__);
+        goto Redirection_Quit ;
+    }
+
+    // Transparancy
+    SDL_SetColorKey(alphabetSprite, true, 0);
+    SDL_SetColorKey(advancedSprite, true, 0);
+
+    Arkanoid_PrintAlphaNumeric(*surface, alphabetSprite, "About us",(int)(WIDTH_QUARTER*1.5),20);
+
+    Arkanoid_PrintAlphaNumeric(*surface, alphabetSprite, "This application was designed by :",10,HEIGHT_QUARTER+32);
+    Arkanoid_PrintAlphaNumeric(*surface, alphabetSprite, "- Carole TRESER",10,HEIGHT_QUARTER+64);
+    Arkanoid_PrintAlphaNumeric(*surface, alphabetSprite, "- Anthony Mochel",10,HEIGHT_QUARTER+96);
+    SDL_UpdateWindowSurface(window);
+
+    // Events
+
+    SDL_bool laucher = SDL_TRUE;
+
+    while(laucher)
+    {
+        SDL_Event event;
+        while(SDL_PollEvent(&event))
+        {
+            switch(event.type)
+            {
+                case SDL_QUIT:
+                    laucher = SDL_FALSE;
+                    break;
+                case SDL_KEYDOWN:
+                    switch (event.key.keysym.sym)
+                    {
+                        case SDLK_ESCAPE:
+                            laucher = SDL_FALSE;
+                            WindowBehavior = WINDOW_MENU;
+                            break;
+                        default:
+                            break;
+                    }
+
+                    break;
+                case SDL_MOUSEBUTTONDOWN:
+                    if(event.button.button == SDL_BUTTON_LEFT)
+                    {
+                        printf("Coordnnee du click : %d (X) /%d (Y)\n", event.button.x, event.button.y);
+                    }
+                    break;
+                default:
+                    break;
+            }
+            SDL_UpdateWindowSurface(window);
+        }
+    }
+
+    Redirection_Quit:
+    SDL_FillRect(*surface, NULL, 0x000000);
+    SDL_FreeSurface(*surface);
+    SDL_FreeSurface(alphabetSprite);
+    SDL_FreeSurface(advancedSprite);
+}
+void Arkanoid_ShowHighScores(SDL_Window* window, SDL_Surface** surface)
+{
+    *surface = NULL;
+    SDL_Surface* advancedSprite = NULL;
+    SDL_Surface* alphabetSprite = NULL;
+
+    // define new surface for window
+    *surface = SDL_GetWindowSurface(window);
+    if(surface == NULL){
+        SDL_Log("Erreur : La Surface n'a pas été récupérée : %s \n", SDL_GetError());
+        SDL_Log("Line : %d, File : %s, Function : %s \n", __LINE__, __FILE__, __FUNCTION__);
+        goto Redirection_Quit ;
+    }
+
+    // Load sprites
+    alphabetSprite = SDL_LoadBMP("./public/Arkanoid_ascii.bmp");
+    advancedSprite = SDL_LoadBMP("./public/Arkanoid_sprites.bmp");
+
+    if(advancedSprite == NULL || alphabetSprite == NULL)
+    {
+        SDL_Log("Erreur : Le sprite n'a pas été chargée : %s \n", SDL_GetError());
+        SDL_Log("Line : %d, File : %s, Function : %s \n", __LINE__, __FILE__, __FUNCTION__);
+        goto Redirection_Quit ;
+    }
+
+    // Transparancy
+    SDL_SetColorKey(alphabetSprite, true, 0);
+    SDL_SetColorKey(advancedSprite, true, 0);
+
+
+    Arkanoid_PrintAlphaNumeric(*surface, alphabetSprite, "Hight Scores",(int)(WIDTH_QUARTER*1.5),20);
+
+    Arkanoid_PrintAlphaNumeric(*surface, alphabetSprite, "No scores yet !",10,HEIGHT_QUARTER+32);
+    SDL_UpdateWindowSurface(window);
+    // Events
+
+    SDL_bool laucher = SDL_TRUE;
+
+    while(laucher)
+    {
+        SDL_Event event;
+        while(SDL_PollEvent(&event))
+        {
+            switch(event.type)
+            {
+                case SDL_QUIT:
+                    laucher = SDL_FALSE;
+                    break;
+                case SDL_KEYDOWN:
+                    switch (event.key.keysym.sym)
+                    {
+                        case SDLK_ESCAPE:
+                            laucher = SDL_FALSE;
+                            WindowBehavior = WINDOW_MENU;
+                            break;
+                        default:
+                            break;
+                    }
+
+                    break;
+                case SDL_MOUSEBUTTONDOWN:
+                    if(event.button.button == SDL_BUTTON_LEFT)
+                    {
+                        printf("Coordnnee du click : %d (X) /%d (Y)\n", event.button.x, event.button.y);
+                    }
+                    break;
+                default:
+                    break;
+            }
+            SDL_UpdateWindowSurface(window);
+        }
+    }
+
+    Redirection_Quit:
+    SDL_FillRect(*surface, NULL, 0x000000);
+    SDL_FreeSurface(*surface);
+    SDL_FreeSurface(alphabetSprite);
+    SDL_FreeSurface(advancedSprite);
+}
+void Arkanoid_DrawBoard(SDL_Surface* surface, SDL_Surface* advancedSprites)
+{
+
+    // Fill surface background
+    SDL_Rect position = { 0.0, 0.0, 0.0, 0.0 };
+    for (int j = 0; j < surface->h; j+=64)
+    {
+        for (int i = 0; i < surface->w; i += 48)
+        {
+            position.x = i;
+            position.y = j;
+            SDL_BlitSurface(advancedSprites, &rectBackground, surface, &position);
+        }
+    }
+
+    // Define ball position
+    if(ball.isLaunch == true)
+    {
         ball.m_x += ball.m_vx / delta_t;
         ball.m_y += ball.m_vy / delta_t;
+    }else {
+        ball.m_x = (int)(ship.m_x + (ship.m_src.w/2) - (ball.m_src.w/2));
+        ball.m_y = (int)(ship.m_y - (ball.m_src.h));
     }
 
+    // display ball
+    SDL_Rect ballPosition = { (int)(ball.m_x), (int)(ball.m_y), 0, 0 };
+    SDL_BlitSurface(advancedSprites, &ball.m_src, surface, &ballPosition);
 
-    double y = ball.m_y + ball.m_src.h;
-	// collision bord
-    if ((ball.m_x < 1) || (ball.m_x > (surfWindow->w - 25)))
+
+    // ball collision
+    if ((ball.m_y <= 1) || (ball.m_y+ball.m_src.h >= (surface->h)))
+        ball.m_vy *= -1;
+    else if ((ball.m_x <= 1) || (ball.m_x+ball.m_src.w >= (surface->w)))
         ball.m_vx *= -1;
-    if ( (ball.m_y < 1) || (ball.m_y > (surfWindow->h - 25))
-         || ( (ball.m_x >= ship.m_x) && (ball.m_x <= ship.m_x + ship.m_src.w) && (y >= ship.m_y) && (y <= ship.m_y + ship.m_src.h) )
-         )
+    else if ((ball.m_x+ball.m_src.w > ship.m_x) && (ball.m_x < ship.m_x + ship.m_src.w) && (ball.m_y+ball.m_src.h >= ship.m_y))
         ball.m_vy *= -1;
 
+    position.x = (int) ship.m_x;
+    position.y = (int) ship.m_y;
 
-	// touche bas -> rouge
-    if (ball.m_y >(surfWindow->h - 25))
-        ball.m_src.y = 64;
-	// touche bas -> vert
-    if (ball.m_y < 1)
-        ball.m_src.y = 96;
-
-	// vaisseau
-
-    dest.x = ship.m_x;
-    dest.y = ship.m_y;
-    if(ball.isLaunch == 0)
-    {
-        ball.m_x = ship.m_x + (ship.m_src.x/2) - 12.5;
-        ball.m_y = ship.m_y - 25;
-    }
-
-    if(SDL_BlitSurface(surfDefaultSprites, &ship.m_src, surfWindow, &dest) != 0)
-    {
-        // display error on console
-        fprintf(stderr, "Erreur lors de l'affichage du vaisseaux : %s\n", SDL_GetError());
-        exit(EXIT_FAILURE);
-    }
-}
-
-
-
-int main(int argc, char** argv)
-{
-    // initialize SDL : video
-    if (SDL_Init(SDL_INIT_VIDEO) != 0 )
-    {
-        // display error on console
-        fprintf(stderr, "Erreur lors de l'initialisation de la SDL : %s\n", SDL_GetError());
-
-        // exit application
-        exit(EXIT_FAILURE);
-    }
-
-	init();
-    
-	bool quit = false;
-	while (!quit)
-	{
-		SDL_Event event;
-		while (!quit && SDL_PollEvent(&event))
-		{
-			switch (event.type)
-			{
-			case SDL_QUIT:
-				quit = true;
-				break;
-			case SDL_KEYDOWN:
-				switch (event.key.keysym.sym)
-				{
-					// touche clavier
-                    case SDLK_LEFT:  ship.m_x -= 10; break;
-                    case SDLK_RIGHT: ship.m_x +=10; break;
-					case SDLK_ESCAPE: quit = true; break;
-                    case SDLK_SPACE : ball.isLaunch = 1;
-					default: break;
-				}
-				break;
-            case SDL_MOUSEMOTION:	ship.m_x += event.motion.xrel;	break;
-			case SDL_MOUSEBUTTONDOWN:
-				printf("mouse click %d\n", event.button.button);
-				break;
-			default: break;
-			}
-		}
-		prev = now;
-		now = SDL_GetPerformanceCounter();
-		delta_t = (double)((now - prev) * 1000 / (double)SDL_GetPerformanceFrequency());
-
-        draw();
-
-        // Update surface for display sprites
-        if(SDL_UpdateWindowSurface(winArkanoid) != 0)
-        {
-            // display error on console
-            fprintf(stderr, "Erreur lors de l'update de la surface : %s\n", SDL_GetError());
-            exit(EXIT_FAILURE);
-        }
-
-	}
-    SDL_FreeSurface(surfWindow);
-    SDL_FreeSurface(surfDefaultSprites);
-    SDL_FreeSurface(surfAdvancedSprites);
-    SDL_FreeSurface(surfAlphabetSprites);
-
-
-    SDL_DestroyWindow(winArkanoid);
-    SDL_Quit();
-
-    return EXIT_SUCCESS;
+    SDL_BlitSurface(advancedSprites, &ship.m_src, surface, &position);
 }
