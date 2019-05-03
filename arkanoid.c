@@ -8,6 +8,7 @@
 #define WIDTH_CENTER WIDTH/2
 #define HEIGHT_QUARTER HEIGHT/4
 #define WIDTH_QUARTER WIDTH/4
+#define ALLOWED_PX 5
 
 #define NUMBER_OF_MENU 4
 
@@ -331,10 +332,13 @@ void Arkanoid_ShowBoard(SDL_Window* window, SDL_Surface** surface)
                     switch (event.key.keysym.sym)
                     {
                         case SDLK_LEFT:
-                            ship.m_x -= 10;
+                            if( (ship.m_x) >= 1 )
+                                ship.m_x -= 10;
+
                             break;
                         case SDLK_RIGHT:
-                            ship.m_x +=10;
+                            if( (ship.m_x + ship.m_src.w) < (*surface)->w )
+                                ship.m_x +=10;
                             break;
                         case SDLK_ESCAPE:
                             gameLaucher = SDL_FALSE;
@@ -556,9 +560,9 @@ void Arkanoid_DrawBoard(SDL_Surface* surface, SDL_Surface* advancedSprites)
 
 
     // ball collision
-    if ((ball.m_y <= 1) || (ball.m_y+ball.m_src.h >= (surface->h)))
+    if ((ball.m_y < ALLOWED_PX) || (ball.m_y+ball.m_src.h > (surface->h)-ALLOWED_PX))
         ball.m_vy *= -1;
-    else if ((ball.m_x <= 1) || (ball.m_x+ball.m_src.w >= (surface->w)))
+    else if ((ball.m_x < ALLOWED_PX) || (ball.m_x+ball.m_src.w > (surface->w)-ALLOWED_PX))
         ball.m_vx *= -1;
     else if ((ball.m_x+ball.m_src.w > ship.m_x) && (ball.m_x < ship.m_x + ship.m_src.w) && (ball.m_y+ball.m_src.h >= ship.m_y))
         ball.m_vy *= -1;
