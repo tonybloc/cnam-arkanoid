@@ -1,9 +1,6 @@
 #include "./headers/lib.h"
 #include "./headers/ball.h"
 #include "./headers/ship.h"
-#include "./headers/config.h"
-#include "./headers/color.h"
-#include "./headers/menu.h"
 
 #define HEIGHT 600
 #define WIDTH 600
