@@ -4,19 +4,15 @@
 #include <SDL.h>
 
 /**
- * @brief Gui_Brick
- */
-typedef struct Gui_Brick Gui_Brick;
-
-
-/**
  * @brief The Brick struct
  */
-struct Gui_Brick
+typedef struct Gui_Brick
 {
     int key;
+    double m_x;
+    double m_y;
     SDL_Rect m_src;
-};
+} Gui_Brick;
 
 /**
  * @brief initializeBrick : initialize new gui_brick

@@ -4,12 +4,14 @@
 #include <stdbool.h>
 #include "./headers/ball.h"
 #include "./headers/ship.h"
-#include "./headers/brick.h"
 #include "./headers/round.h"
+
+#define NUMBER_MAX_OF_BRICKS 260
+#define NUMBER_OF_COLUMN_IN_BRICKS 13
+#define NUMBER_MAX_ROW_IN_BRICKS 20
 
 Ball ball;
 Ship ship;
-Brick brick;
 Round r;
 
 Uint64 prev, now; // timers
@@ -44,7 +46,6 @@ void init()
 
     initializeBall(&ball);
     initializeShip(&ship);
-    initializeBrick(&brick);
 
     ship.m_x = 0;
     ship.m_y = surfWindow->h - 32;
@@ -64,16 +65,22 @@ void init()
     ball.m_src.w = 24;
     ball.m_src.h = 24;
 
-    brick.m_x = 0;
-    brick.m_y = 0;
-    brick.m_vx =0;
-    ship.m_vy = 0;
-    brick.m_src.x = 0;
-    brick.m_src.y = 0;
-    brick.m_src.w = 32;
-    brick.m_src.h = 16;
 
-    initializeRound(&r, &ship, &ball, "/home/carole/CNAM/TPs_C/arkanoid/public/mur.txt", row, column);
+    initializeRound(&r, &ship, &ball, "./public/mur.txt");
+
+    /*
+    for(int index =0; index < NUMBER_MAX_OF_BRICKS; index ++)
+    {
+        if((r.tab_bricks[index]) != NULL)
+        {
+            Gui_Brick* brick = r.tab_bricks[index];
+            printf("brick (%d): x%d  y%d  h%d  w%d \n", brick->key, brick->m_src.x, brick->m_src.y, brick->m_src.h, brick->m_src.w);
+        }
+        else {
+            printf("NULL \n");
+        }
+    }
+    */
 }
 
 
@@ -96,30 +103,27 @@ void draw()
 
         }
 
-    //affiche mur de briques
-    SDL_Rect destBrique = {0,0,0,0};
-    for (int j = 10; j < surfWindow-> h /3; j+=20){
-        for (int i = 10; i <  surfWindow-> w -20; i += 36)
-        {
-            destBrique.x = i;
-            destBrique.y = j;
-            SDL_BlitSurface(surfAdvancedSprites, &brick.m_src, surfWindow, &destBrique);
-
-            //srcBriques.x +=32;
-        }
-    }
-
     // Build the bricks wall with the array of the round
 
-    /*SDL_Rect destGuiBrique = {0,0,0,0};
-    for (int i = 0; i < row; i++) {
-        for (int j=0; j < column; j++) {
-            destBrique.x = i;
-            destBrique.y = j;
-            SDL_BlitSurface(surfAdvancedSprites, &r.tab_bricks[i][j].m_src, surfWindow, &destGuiBrique);
+
+    int row = 0;
+    int column = 0;
+    SDL_Rect destGuiBrique = {0,0,0,0};
+
+    for (int i = 0; i < NUMBER_MAX_OF_BRICKS; i++) {
+
+        if((r.tab_bricks[i]) != NULL)
+        {
+            row = i / NUMBER_OF_COLUMN_IN_BRICKS;
+            column = i % NUMBER_OF_COLUMN_IN_BRICKS;
+            destGuiBrique.x = column * 32;
+            destGuiBrique.y = row * 16;
+            Gui_Brick brick = *(r.tab_bricks[i]);
+            SDL_BlitSurface(surfAdvancedSprites, &brick.m_src, surfWindow, &destGuiBrique);
         }
 
-    }*/
+    }
+
 
 
     // affiche balle
@@ -235,6 +239,13 @@ int main(int argc, char** argv)
         }
 
     }
+
+    // free memory of round
+    for (int index = 0; index < NUMBER_MAX_OF_BRICKS;index++) {
+        free(r.tab_bricks[index]);
+    }
+    free(r.tab_bricks);
+
     SDL_FreeSurface(surfWindow);
     SDL_FreeSurface(surfDefaultSprites);
     SDL_FreeSurface(surfAdvancedSprites);
