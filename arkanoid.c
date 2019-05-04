@@ -1,6 +1,11 @@
 #include "./headers/lib.h"
 #include "./headers/ball.h"
 #include "./headers/ship.h"
+#include "./headers/round.h"
+
+#define NUMBER_MAX_OF_BRICKS 260
+#define NUMBER_OF_COLUMN_IN_BRICKS 13
+#define NUMBER_MAX_ROW_IN_BRICKS 20
 
 #define HEIGHT 600
 #define WIDTH 600
@@ -22,6 +27,7 @@ enum ARKANOID_WINDOW_OPTION { WINDOW_MENU = 1, WINDOW_BOARD = 2, WINDOW_QUIT = 3
 /* Global Variable */
 static Ball ball;           // Ball
 static Ship ship;           // Ship
+static Round r;
 static Uint64 prev, now;    // timers
 static double delta_t;      // refresh frame (ms)
 
@@ -293,6 +299,7 @@ void Arkanoid_ShowBoard(SDL_Window* window, SDL_Surface** surface)
 
     initializeBall(&ball);
     initializeShip(&ship);
+    initializeRound(&r, &ship, &ball, "./public/mur.txt");
 
 
     ship.m_src.x = 384;
@@ -304,7 +311,6 @@ void Arkanoid_ShowBoard(SDL_Window* window, SDL_Surface** surface)
     ship.m_vx = 0;
     ship.m_vy = 0;
 
-
     ball.m_src.x = 80;
     ball.m_src.y = 64;
     ball.m_src.w = 16;
@@ -314,9 +320,26 @@ void Arkanoid_ShowBoard(SDL_Window* window, SDL_Surface** surface)
     ball.m_vx = 2.0;
     ball.m_vy = 10;
 
+
+
+    /*
+    for(int index =0; index < NUMBER_MAX_OF_BRICKS; index ++)
+    {
+        if((r.tab_bricks[index]) != NULL)
+        {
+            Gui_Brick* brick = r.tab_bricks[index];
+            printf("brick (%d): x%d  y%d  h%d  w%d \n", brick->key, brick->m_src.x, brick->m_src.y, brick->m_src.h, brick->m_src.w);
+        }
+        else {
+            printf("NULL \n");
+        }
+    }
+    */
+
     // Events
 
     SDL_bool gameLaucher = SDL_TRUE;
+
 
     while(gameLaucher)
     {
@@ -362,13 +385,19 @@ void Arkanoid_ShowBoard(SDL_Window* window, SDL_Surface** surface)
     }
 
     Redirection_Quit:
+    // free memory of round
+    for (int index = 0; index < NUMBER_MAX_OF_BRICKS;index++) {
+        free(r.tab_bricks[index]);
+    }
+    free(r.tab_bricks);
+
     SDL_FillRect(*surface, NULL, 0x000000);
     SDL_FreeSurface(*surface);
     SDL_FreeSurface(alphabetSprite);
     SDL_FreeSurface(advancedSprite);
-
-
 }
+
+
 void Arkanoid_ShowAbout(SDL_Window* window, SDL_Surface** surface)
 {
     *surface = NULL;
@@ -406,7 +435,6 @@ void Arkanoid_ShowAbout(SDL_Window* window, SDL_Surface** surface)
     SDL_UpdateWindowSurface(window);
 
     // Events
-
     SDL_bool laucher = SDL_TRUE;
 
     while(laucher)
@@ -542,6 +570,25 @@ void Arkanoid_DrawBoard(SDL_Surface* surface, SDL_Surface* advancedSprites)
             position.y = j;
             SDL_BlitSurface(advancedSprites, &rectBackground, surface, &position);
         }
+    }
+
+    // display wall
+    int row = 0;
+    int column = 0;
+    SDL_Rect destGuiBrique = {0,0,0,0};
+
+    for (int i = 0; i < NUMBER_MAX_OF_BRICKS; i++) {
+
+        if((r.tab_bricks[i]) != NULL)
+        {
+            row = i / NUMBER_OF_COLUMN_IN_BRICKS;
+            column = i % NUMBER_OF_COLUMN_IN_BRICKS;
+            destGuiBrique.x = column * 32;
+            destGuiBrique.y = row * 16;
+            Gui_Brick brick = *(r.tab_bricks[i]);
+            SDL_BlitSurface(advancedSprites, &brick.m_src, surface, &destGuiBrique);
+        }
+
     }
 
     // Define ball position

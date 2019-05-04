@@ -16,13 +16,15 @@ add_executable(${PROJECT_NAME}
     "./arkanoid.c";
     "./headers/ball.h"
     "./headers/ship.h"
-    "./headers/brick.h"
     "./headers/lib.h"
     "./headers/include.h"
+    "./headers/gui_brick.h"
+    "./headers/round.h"
     "./sources/ball.c"
-    "./sources/brick.c"
     "./sources/ship.c"
     "./sources/lib.c"
+    "./sources/gui_brick.c"
+    "./sources/round.c"
     )
 
 target_sources(${PROJECT_NAME} PUBLIC arkanoid.c)
@@ -34,6 +36,8 @@ file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/public/sprites.bmp
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/public/Arkanoid_sprites.bmp
         DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/public)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/public/Arkanoid_ascii.bmp
+        DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/public)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/public/mur.txt
         DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/public)
 
 IF (MSVC)
