@@ -15,6 +15,13 @@
 #define WIDTH_QUARTER WIDTH/4
 #define ALLOWED_PX 5
 
+#define BALL_SPEED_X 10
+#define BALL_SPEED_Y 10
+
+#define BRICK_GRAY 12
+#define BRICK_GOLD 13
+#define BRICK_SHINING 6
+
 #define NUMBER_OF_MENU 4
 
 //struct { double x; double y; } ball_speed;
@@ -30,7 +37,8 @@ static Ship ship;           // Ship
 static Round r;
 static Uint64 prev, now;    // timers
 static double delta_t;      // refresh frame (ms)
-
+static double ball_nextX, ball_nextY = 0;
+static Gui_Brick* brick;
 static enum ARKANOID_WINDOW_OPTION WindowBehavior = WINDOW_MENU;
 
 
@@ -309,7 +317,7 @@ void Arkanoid_ShowBoard(SDL_Window* window, SDL_Surface** surface)
     ship.m_x = ((*surface)->w/2) - (ship.m_src.w/2);
     ship.m_y = (*surface)->h - 32;
     ship.m_vx = 0;
-    ship.m_vy = 0;
+    ship.m_dir = 0;
 
     ball.m_src.x = 80;
     ball.m_src.y = 64;
@@ -317,8 +325,8 @@ void Arkanoid_ShowBoard(SDL_Window* window, SDL_Surface** surface)
     ball.m_src.h = 16;
     ball.m_x = ship.m_x + (ship.m_src.w/2) - (ball.m_src.w/2);
     ball.m_y = ship.m_y - (ball.m_src.h);
-    ball.m_vx = 2.0;
-    ball.m_vy = 10;
+    ball.m_vx = BALL_SPEED_X;
+    ball.m_vy = BALL_SPEED_Y;
 
 
 
@@ -346,22 +354,32 @@ void Arkanoid_ShowBoard(SDL_Window* window, SDL_Surface** surface)
         SDL_Event event;
         while(SDL_PollEvent(&event))
         {
+            ship.m_dir = 1;
             switch(event.type)
             {
                 case SDL_QUIT:
                     gameLaucher = SDL_FALSE;
+                    break;
+                case SDL_MOUSEMOTION:
+                    ship.m_x += event.motion.xrel;
+                    ship.m_dir = (event.motion.xrel > 0) ? 1 : -1;
                     break;
                 case SDL_KEYDOWN:
                     switch (event.key.keysym.sym)
                     {
                         case SDLK_LEFT:
                             if( (ship.m_x) >= 1 )
+                            {
                                 ship.m_x -= 10;
-
+                                ship.m_dir = -1;
+                            }
                             break;
                         case SDLK_RIGHT:
                             if( (ship.m_x + ship.m_src.w) < (*surface)->w )
-                                ship.m_x +=10;
+                            {
+                                ship.m_x += 10;
+                                ship.m_dir = 1;
+                            }
                             break;
                         case SDLK_ESCAPE:
                             gameLaucher = SDL_FALSE;
@@ -379,7 +397,7 @@ void Arkanoid_ShowBoard(SDL_Window* window, SDL_Surface** surface)
         }
         prev = now;
         now = SDL_GetPerformanceCounter();
-        delta_t = (double)( (now-prev) * 1000 / (double)SDL_GetPerformanceFrequency());
+        delta_t = (double)( (now-prev) * 1000 / SDL_GetPerformanceFrequency());
         Arkanoid_DrawBoard(*surface, advancedSprite);
         SDL_UpdateWindowSurface(window);
     }
@@ -396,8 +414,6 @@ void Arkanoid_ShowBoard(SDL_Window* window, SDL_Surface** surface)
     SDL_FreeSurface(alphabetSprite);
     SDL_FreeSurface(advancedSprite);
 }
-
-
 void Arkanoid_ShowAbout(SDL_Window* window, SDL_Surface** surface)
 {
     *surface = NULL;
@@ -576,7 +592,7 @@ void Arkanoid_DrawBoard(SDL_Surface* surface, SDL_Surface* advancedSprites)
     int row = 0;
     int column = 0;
     SDL_Rect destGuiBrique = {0,0,0,0};
-
+    SDL_Rect destShadow = {0,0,0,0};
     for (int i = 0; i < NUMBER_MAX_OF_BRICKS; i++) {
 
         if((r.tab_bricks[i]) != NULL)
@@ -585,35 +601,117 @@ void Arkanoid_DrawBoard(SDL_Surface* surface, SDL_Surface* advancedSprites)
             column = i % NUMBER_OF_COLUMN_IN_BRICKS;
             destGuiBrique.x = column * 32;
             destGuiBrique.y = row * 16;
-            Gui_Brick brick = *(r.tab_bricks[i]);
-            SDL_BlitSurface(advancedSprites, &brick.m_src, surface, &destGuiBrique);
+
+            Gui_Brick* brick = (r.tab_bricks[i]);
+            brick->m_x = destGuiBrique.x;
+            brick->m_y = destGuiBrique.y;
+
+            destShadow.x = destGuiBrique.x + 10;
+            destShadow.y = destGuiBrique.y + 10;
+
+            // shadow
+            SDL_Surface* shadow = SDL_CreateRGBSurface(0,brick->m_src.w, brick->m_src.h,32,0,0,0,0);
+            SDL_FillRect(shadow, NULL, SDL_MapRGB(shadow->format, 10,10,10));
+            SDL_SetSurfaceBlendMode(shadow, SDL_BLENDMODE_BLEND);
+            SDL_SetSurfaceAlphaMod(shadow,148);
+            SDL_BlitSurface(shadow, NULL, surface, &destShadow);
+            SDL_BlitSurface(advancedSprites, &(r.tab_bricks[i])->m_src, surface, &destGuiBrique);
+            SDL_FreeSurface(shadow);
         }
 
     }
+
+
+    // display ball
+    SDL_Rect ballPosition = { (int)(ball.m_x), (int)(ball.m_y), 0, 0 };
+    SDL_BlitSurface(advancedSprites, &ball.m_src, surface, &ballPosition);
 
     // Define ball position
     if(ball.isLaunch == true)
     {
         ball.m_x += ball.m_vx / delta_t;
         ball.m_y += ball.m_vy / delta_t;
-    }else {
+
+        ball_nextX = ball.m_x + (ball.m_vx / delta_t);
+        ball_nextY = ball.m_y + (ball.m_vy / delta_t);
+
+        // ball collision
+        if ((ball_nextY < ALLOWED_PX) || (ball_nextY+ball.m_src.h > (surface->h)-ALLOWED_PX))
+        {
+            ball.m_vy *= -1;
+        }
+        else if ((ball_nextX < ALLOWED_PX) || (ball_nextX+ball.m_src.w > (surface->w)-ALLOWED_PX))
+        {
+            ball.m_vx *= -1;
+        }
+        else if ((ball_nextX+ball.m_src.w >= ship.m_x) && (ball_nextX <= ship.m_x + ship.m_src.w)
+                 && (ball_nextY+ball.m_src.h >= ship.m_y))
+        {
+            ball.m_vy *= -1;
+            ball.m_vx = (ball_nextX - ship.m_x)/(ship.m_src.w/2)*5;
+        }
+        else
+        {
+            for (int index = 0;index < NUMBER_MAX_OF_BRICKS; index++)
+            {
+                Gui_Brick* brick = r.tab_bricks[index];
+                if(brick != NULL)
+                {
+                    if( ((ball_nextY+ball.m_src.h >= brick->m_y) && (ball_nextY < brick->m_y + brick->m_src.h))
+                            && ((ball_nextX+ball.m_src.w >= brick->m_x) && (ball_nextX < brick->m_x+brick->m_src.w)) )
+                    {
+
+                        //if( abs((int)(ball_nextX-brick->m_x)) < abs(5))
+
+                        ball.m_vy *= -1;
+                        if(brick->key != BRICK_GOLD)
+                        {
+                            printf("brick (%d) health : %d %d \n",index, brick->m_health,r.tab_bricks[index]->m_health);
+                            brick->m_health += -1 ;
+
+                            if(brick->m_health <= 0)
+                               r.tab_bricks[index] = NULL;
+
+                        }
+
+
+
+                        break;
+
+                        /*
+                        SDL_Rect dest = {0,0,0,0};
+                        brick->m_health -= -1 ;
+                        for(int shine_x = 1; shine_x < BRICK_SHINING ;shine_x++)
+                        {
+                            brick->m_src.x += 32 * shine_x;
+                            dest.x = (int)brick->m_x;
+                            dest.y = (int)brick->m_y;
+                            SDL_BlitSurface(advancedSprites, &(brick)->m_src, surface, &dest);
+                        }
+                        brick->m_src.x = 0;
+                        */
+
+                        /*
+                        if( (ball_nextX+ball.m_src.w > brick->m_x) && (ball_nextX < brick->m_x+brick->m_src.w) )
+                        {
+                            printf("Collision LEFT/RIGHT \n");
+                            ball.m_vx *= -1;
+                            break;
+                        }
+                        */
+                    }
+                }
+            }
+
+        }
+    }
+    else
+    {
         ball.m_x = (int)(ship.m_x + (ship.m_src.w/2) - (ball.m_src.w/2));
         ball.m_y = (int)(ship.m_y - (ball.m_src.h));
     }
 
-    // display ball
-    SDL_Rect ballPosition = { (int)(ball.m_x), (int)(ball.m_y), 0, 0 };
-    SDL_BlitSurface(advancedSprites, &ball.m_src, surface, &ballPosition);
-
-
-    // ball collision
-    if ((ball.m_y < ALLOWED_PX) || (ball.m_y+ball.m_src.h > (surface->h)-ALLOWED_PX))
-        ball.m_vy *= -1;
-    else if ((ball.m_x < ALLOWED_PX) || (ball.m_x+ball.m_src.w > (surface->w)-ALLOWED_PX))
-        ball.m_vx *= -1;
-    else if ((ball.m_x+ball.m_src.w > ship.m_x) && (ball.m_x < ship.m_x + ship.m_src.w) && (ball.m_y+ball.m_src.h >= ship.m_y))
-        ball.m_vy *= -1;
-
+    //printf("direction vault : vx%d vy%d \n ", (int)ship.m_vx, (int)ship.m_dir);
     position.x = (int) ship.m_x;
     position.y = (int) ship.m_y;
 

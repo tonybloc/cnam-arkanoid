@@ -9,9 +9,11 @@
 typedef struct Gui_Brick
 {
     int key;
+    int m_health;
     double m_x;
     double m_y;
     SDL_Rect m_src;
+
 } Gui_Brick;
 
 /**
