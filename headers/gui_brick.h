@@ -15,7 +15,7 @@ typedef struct Gui_Brick
     SDL_Rect m_src;
     bool m_isShining;
     int m_indexShining;
-
+    int score;
 } Gui_Brick;
 
 /**
