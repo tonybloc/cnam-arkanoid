@@ -58,6 +58,7 @@ Gui_Brick** readFile( char filename[]){
                 bricks[i] = NULL;
                 i++;
             }
+
         }
         fclose(fichier);
     }
@@ -184,7 +185,9 @@ Gui_Brick* witch(int n){
         b->m_src.x =0;
         b->m_src.y =32;
         b->m_src.w =32;
-        b->m_src.h =16;
+        b->m_src.h =16;        
+        b->m_isShining = true;
+        b->m_indexShining = 0;
         break;
     case 13:
         // Brique or
@@ -194,9 +197,11 @@ Gui_Brick* witch(int n){
         b->m_src.y =48;
         b->m_src.w =32;
         b->m_src.h =16;
+        b->m_isShining = true;
+        b->m_indexShining = 0;
         break;
     default:
-        NULL;
+        b = NULL;
         free(b);
     }
 

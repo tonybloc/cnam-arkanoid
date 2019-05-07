@@ -9,4 +9,6 @@ void initializeGuiBrick(Gui_Brick* b){
     b->m_src.y = 0;
     b->m_src.h = 0;
     b->m_src.w = 0;
+    b->m_isShining = false;
+    b->m_indexShining = 0;
 }

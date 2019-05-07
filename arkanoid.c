@@ -35,12 +35,14 @@ enum ARKANOID_WINDOW_OPTION { WINDOW_MENU = 1, WINDOW_BOARD = 2, WINDOW_QUIT = 3
 static Ball ball;           // Ball
 static Ship ship;           // Ship
 static Round r;
+static int Score = 0;
 static Uint64 prev, now;    // timers
 static double delta_t;      // refresh frame (ms)
 static double ball_nextX, ball_nextY = 0;
 static Gui_Brick* brick;
 static enum ARKANOID_WINDOW_OPTION WindowBehavior = WINDOW_MENU;
-
+static double prev_vault_x = 0;
+//static Gui_Brick BrickShining[]
 
 /* Arkanoid Window */
 static SDL_Window* Arkanoid_Window = NULL;
@@ -316,7 +318,7 @@ void Arkanoid_ShowBoard(SDL_Window* window, SDL_Surface** surface)
     ship.m_src.h = 16;
     ship.m_x = ((*surface)->w/2) - (ship.m_src.w/2);
     ship.m_y = (*surface)->h - 32;
-    ship.m_vx = 0;
+    ship.m_vx = 4;
     ship.m_dir = 0;
 
     ball.m_src.x = 80;
@@ -370,15 +372,20 @@ void Arkanoid_ShowBoard(SDL_Window* window, SDL_Surface** surface)
                         case SDLK_LEFT:
                             if( (ship.m_x) >= 1 )
                             {
-                                ship.m_x -= 10;
+                                printf("position -x : %d  \n",(int)(prev_vault_x-ship.m_x));
+                                ship.m_x -= 10 ;
                                 ship.m_dir = -1;
+                                prev_vault_x = ship.m_x;
                             }
                             break;
                         case SDLK_RIGHT:
                             if( (ship.m_x + ship.m_src.w) < (*surface)->w )
                             {
+
+                                printf("position +x: %d  \n",(int)(ship.m_x-prev_vault_x));
                                 ship.m_x += 10;
                                 ship.m_dir = 1;
+                                prev_vault_x = ship.m_x;
                             }
                             break;
                         case SDLK_ESCAPE:
@@ -399,6 +406,7 @@ void Arkanoid_ShowBoard(SDL_Window* window, SDL_Surface** surface)
         now = SDL_GetPerformanceCounter();
         delta_t = (double)( (now-prev) * 1000 / SDL_GetPerformanceFrequency());
         Arkanoid_DrawBoard(*surface, advancedSprite);
+
         SDL_UpdateWindowSurface(window);
     }
 
@@ -595,7 +603,7 @@ void Arkanoid_DrawBoard(SDL_Surface* surface, SDL_Surface* advancedSprites)
     SDL_Rect destShadow = {0,0,0,0};
     for (int i = 0; i < NUMBER_MAX_OF_BRICKS; i++) {
 
-        if((r.tab_bricks[i]) != NULL)
+        if( (r.tab_bricks[i]) != NULL)
         {
             row = i / NUMBER_OF_COLUMN_IN_BRICKS;
             column = i % NUMBER_OF_COLUMN_IN_BRICKS;
@@ -615,7 +623,25 @@ void Arkanoid_DrawBoard(SDL_Surface* surface, SDL_Surface* advancedSprites)
             SDL_SetSurfaceBlendMode(shadow, SDL_BLENDMODE_BLEND);
             SDL_SetSurfaceAlphaMod(shadow,148);
             SDL_BlitSurface(shadow, NULL, surface, &destShadow);
-            SDL_BlitSurface(advancedSprites, &(r.tab_bricks[i])->m_src, surface, &destGuiBrique);
+
+
+            if(brick->m_isShining)
+            {
+                SDL_Rect shine_source = brick->m_src;
+                shine_source.x += 32*brick->m_indexShining;
+                r.tab_bricks[i]->m_indexShining += 1;
+
+                SDL_BlitSurface(advancedSprites, &shine_source, surface, &destGuiBrique);
+
+                if(r.tab_bricks[i]->m_indexShining >= 5)
+                {
+                    r.tab_bricks[i]->m_isShining = false;
+                    r.tab_bricks[i]->m_indexShining = 0;
+                }
+            }else {
+                SDL_BlitSurface(advancedSprites, &(r.tab_bricks[i])->m_src, surface, &destGuiBrique);
+            }
+
             SDL_FreeSurface(shadow);
         }
 
@@ -624,7 +650,19 @@ void Arkanoid_DrawBoard(SDL_Surface* surface, SDL_Surface* advancedSprites)
 
     // display ball
     SDL_Rect ballPosition = { (int)(ball.m_x), (int)(ball.m_y), 0, 0 };
-    SDL_BlitSurface(advancedSprites, &ball.m_src, surface, &ballPosition);
+
+    SDL_Surface* ball_shadow = SDL_CreateRGBSurface(0, ball.m_src.w, ball.m_src.h,32,0,0,0,0);
+    SDL_FillRect(ball_shadow, NULL, SDL_MapRGB(ball_shadow->format, 255,0,0));
+    SDL_SetSurfaceBlendMode(ball_shadow, SDL_BLENDMODE_BLEND);
+    SDL_SetSurfaceColorMod(ball_shadow,255,0,0);
+
+    SDL_BlitSurface(advancedSprites, &ball.m_src, ball_shadow, &ballPosition);
+
+
+
+    SDL_BlitSurface(ball_shadow, NULL, surface, &ballPosition);
+    //SDL_BlitSurface(advancedSprites, &ball.m_src, surface, &ballPosition);
+
 
     // Define ball position
     if(ball.isLaunch == true)
@@ -634,6 +672,7 @@ void Arkanoid_DrawBoard(SDL_Surface* surface, SDL_Surface* advancedSprites)
 
         ball_nextX = ball.m_x + (ball.m_vx / delta_t);
         ball_nextY = ball.m_y + (ball.m_vy / delta_t);
+
 
         // ball collision
         if ((ball_nextY < ALLOWED_PX) || (ball_nextY+ball.m_src.h > (surface->h)-ALLOWED_PX))
@@ -657,52 +696,32 @@ void Arkanoid_DrawBoard(SDL_Surface* surface, SDL_Surface* advancedSprites)
                 Gui_Brick* brick = r.tab_bricks[index];
                 if(brick != NULL)
                 {
-                    if( ((ball_nextY+ball.m_src.h >= brick->m_y) && (ball_nextY < brick->m_y + brick->m_src.h))
-                            && ((ball_nextX+ball.m_src.w >= brick->m_x) && (ball_nextX < brick->m_x+brick->m_src.w)) )
+                    if( (ball_nextX < brick->m_x+brick->m_src.w && ball_nextX+ball.m_src.w > brick->m_x)
+                            && (ball_nextY < brick->m_y+brick->m_src.h && ball_nextY+ball.m_src.h > brick->m_y))
                     {
-
-                        //if( abs((int)(ball_nextX-brick->m_x)) < abs(5))
-
-                        ball.m_vy *= -1;
-                        if(brick->key != BRICK_GOLD)
-                        {
-                            printf("brick (%d) health : %d %d \n",index, brick->m_health,r.tab_bricks[index]->m_health);
-                            brick->m_health += -1 ;
-
-                            if(brick->m_health <= 0)
-                               r.tab_bricks[index] = NULL;
-
-                        }
-
-
-
-                        break;
-
-                        /*
-                        SDL_Rect dest = {0,0,0,0};
-                        brick->m_health -= -1 ;
-                        for(int shine_x = 1; shine_x < BRICK_SHINING ;shine_x++)
-                        {
-                            brick->m_src.x += 32 * shine_x;
-                            dest.x = (int)brick->m_x;
-                            dest.y = (int)brick->m_y;
-                            SDL_BlitSurface(advancedSprites, &(brick)->m_src, surface, &dest);
-                        }
-                        brick->m_src.x = 0;
-                        */
-
-                        /*
-                        if( (ball_nextX+ball.m_src.w > brick->m_x) && (ball_nextX < brick->m_x+brick->m_src.w) )
-                        {
-                            printf("Collision LEFT/RIGHT \n");
+                        if( (ball.m_x > brick->m_x+brick->m_src.w || ball.m_x < brick->m_x) )
                             ball.m_vx *= -1;
-                            break;
+
+
+                        if( (ball.m_y > brick->m_y+brick->m_src.h || ball.m_y < brick->m_y) )
+                            ball.m_vy *= -1;
+
+
+                        brick->m_health += -1;
+
+                        if(brick->m_health <= 0)
+                            r.tab_bricks[index] = NULL;
+
+                        if(brick->key == BRICK_GOLD || brick->key == BRICK_GRAY)
+                        {
+                            r.tab_bricks[index]->m_isShining = true;
+                            r.tab_bricks[index]->m_indexShining = 1;
                         }
-                        */
+                        break;
                     }
+
                 }
             }
-
         }
     }
     else
