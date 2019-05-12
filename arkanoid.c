@@ -154,10 +154,10 @@ void Arkanoid_ShowMenu(SDL_Window* window, SDL_Surface** surface)
     char* MenuLabels[NUMBER_OF_MENU] = {"New Game", "High Score", "About", "Exit"};
 
     SDL_Rect MenuPositionOfSelectors[NUMBER_OF_MENU] = {
-        {(int)(WIDTH_QUARTER)-32, WIDTH_QUARTER+00, 32, 32},
-        {(int)(WIDTH_QUARTER)-32, WIDTH_QUARTER+32, 32, 32},
-        {(int)(WIDTH_QUARTER)-32, WIDTH_QUARTER+64, 32, 32},
-        {(int)(WIDTH_QUARTER)-32, WIDTH_QUARTER+96, 32, 32}
+        {(int)(WIDTH_QUARTER)-32, HEIGHT_QUARTER+00, 32, 32},
+        {(int)(WIDTH_QUARTER)-32, HEIGHT_QUARTER+32, 32, 32},
+        {(int)(WIDTH_QUARTER)-32, HEIGHT_QUARTER+64, 32, 32},
+        {(int)(WIDTH_QUARTER)-32, HEIGHT_QUARTER+96, 32, 32}
     };
 
     // initialize Menu surfaces selectors
