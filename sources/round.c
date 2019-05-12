@@ -1,17 +1,3 @@
-/*SDL_Rect brick_White = { 0, 0, 32, 16 };
-SDL_Rect brick_Orange = { 32, 0, 32, 16 };
-SDL_Rect brick_Turquoise = { 64, 0, 32, 16 };
-SDL_Rect brick_Green = { 128, 0, 32, 16 };
-SDL_Rect brick_Blue = { 256, 0, 32, 16 };
-SDL_Rect brick_Vert_Fonce = { 512, 0, 32, 16 };
-
-SDL_Rect brick_Red = { 0, 16, 32, 16 };
-SDL_Rect brick_Bleu_Clair = { 32, 16, 32, 16 };
-SDL_Rect brick_Rose = { 64, 16, 32, 16 };
-SDL_Rect brick_Jaune = { 128, 16, 32, 16 };
-SDL_Rect brick_Rouge_Fonce = { 256, 16, 32, 16 };
-SDL_Rect brick_Turquoise_Fonce = { 512, 16, 32, 16 };
-*/
 #include <stdlib.h>
 #include <stdio.h>
 #include <SDL.h>
@@ -19,18 +5,19 @@ SDL_Rect brick_Turquoise_Fonce = { 512, 16, 32, 16 };
 
 #define NUMBER_MAX_OF_BRICKS 260
 
-void initializeRound(Round* r, Ship* s, Ball* b ,char filename[]){
-    Gui_Brick** bricks = readFile(filename);
+void initializeRound(Round* r, Ship* s, Ball* b ,char filename[], int l){
+    Gui_Brick** bricks = readFile(filename, l);
     r->tab_bricks = bricks;
     r->ship = s;
     r->ball = b;
+    r->level = l;
 }
 
 ///
 /// \brief reafFile : method which read the content of a file to build a wall of brick
 /// \param filename : name of the file
 ///
-Gui_Brick** readFile( char filename[]){
+Gui_Brick** readFile( char filename[], int level){
 
     int i = 0;
     int brickKey = 0;
@@ -49,7 +36,7 @@ Gui_Brick** readFile( char filename[]){
             // Add new bricks in wall
             if(brickKey >= 0 && brickKey <= 13)
             {
-                Gui_Brick* brk = witch(brickKey);
+                Gui_Brick* brk = witch(brickKey, level);
                 bricks[i] = brk;
                 i++;
             }
@@ -75,7 +62,7 @@ Gui_Brick** readFile( char filename[]){
 /// \param n : given value from the file
 /// \return a gui_brick with the right attributes
 ///
-Gui_Brick* witch(int n){
+Gui_Brick* witch(int n, int level){
 
     Gui_Brick* b = malloc(sizeof(Gui_Brick)* NUMBER_MAX_OF_BRICKS);
 
@@ -89,6 +76,7 @@ Gui_Brick* witch(int n){
         b->m_src.y =0;
         b->m_src.w =32;
         b->m_src.h =16;
+        b->score = 50;
         break;
     case 1:
         // Brique orange
@@ -97,6 +85,7 @@ Gui_Brick* witch(int n){
         b->m_src.y =0;
         b->m_src.w =32;
         b->m_src.h =16;
+        b->score = 60;
         break;
     case 2:
         //Brique turquoise
@@ -105,6 +94,7 @@ Gui_Brick* witch(int n){
         b->m_src.y =0;
         b->m_src.w =32;
         b->m_src.h =16;
+        b->score = 70;
         break;
     case 3:
         //Brique verte
@@ -113,6 +103,7 @@ Gui_Brick* witch(int n){
         b->m_src.y =0;
         b->m_src.w =32;
         b->m_src.h =16;
+        b->score = 80;
         break;
     case 4:
         //Brique bleue
@@ -121,6 +112,7 @@ Gui_Brick* witch(int n){
         b->m_src.y =0;
         b->m_src.w =32;
         b->m_src.h =16;
+        b->score = 100;
         break;
     case 5:
         //Brique verte foncée
@@ -129,6 +121,7 @@ Gui_Brick* witch(int n){
         b->m_src.y =0;
         b->m_src.w =32;
         b->m_src.h =16;
+        b->score = 85;
         break;
     case 6:
         //Brique rouge
@@ -137,6 +130,7 @@ Gui_Brick* witch(int n){
         b->m_src.y =16;
         b->m_src.w =32;
         b->m_src.h =16;
+        b->score = 90;
         break;
     case 7:
         //Brique bleue claire
@@ -145,6 +139,7 @@ Gui_Brick* witch(int n){
         b->m_src.y =16;
         b->m_src.w =32;
         b->m_src.h =16;
+        b->score = 95;
         break;
     case 8:
         //Brique rose
@@ -153,6 +148,7 @@ Gui_Brick* witch(int n){
         b->m_src.y =16;
         b->m_src.w =32;
         b->m_src.h =16;
+        b->score = 110;
         break;
     case 9:
         //Brique jaune
@@ -161,6 +157,7 @@ Gui_Brick* witch(int n){
         b->m_src.y =16;
         b->m_src.w =32;
         b->m_src.h =16;
+        b->score = 120;
         break;
     case 10:
         //Brique rouge fonce
@@ -169,6 +166,7 @@ Gui_Brick* witch(int n){
         b->m_src.y =16;
         b->m_src.w =32;
         b->m_src.h =16;
+        b->score = 125;
         break;
     case 11:
         //Brique turquoise fonce
@@ -177,20 +175,22 @@ Gui_Brick* witch(int n){
         b->m_src.y =16;
         b->m_src.w =32;
         b->m_src.h =16;
+        b->score = 130;
         break;
     case 12:
-        // Brique gris
+        // Brique argenté
         b->key = 12;
         b->m_health = 2;
         b->m_src.x =0;
         b->m_src.y =32;
         b->m_src.w =32;
-        b->m_src.h =16;        
+        b->m_src.h =16;
+        b->score = 50 * level;
         b->m_isShining = true;
         b->m_indexShining = 0;
         break;
     case 13:
-        // Brique or
+        // Brique dorée
         b->key = 13;
         b->m_health = 1;
         b->m_src.x =0;
@@ -199,6 +199,7 @@ Gui_Brick* witch(int n){
         b->m_src.h =16;
         b->m_isShining = true;
         b->m_indexShining = 0;
+        b->score = 0;
         break;
     default:
         b = NULL;
