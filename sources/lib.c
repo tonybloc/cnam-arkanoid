@@ -1,20 +1,20 @@
 #include "./../headers/lib.h"
 
 
-void Arkanoid_PrintAlphaNumeric(SDL_Surface* origin, SDL_Surface* alphaNumericSprite, const char* string, int x, int y)
+void Arkanoid_PrintAlphaNumeric(SDL_Surface* origin, SDL_Surface* alphaNumericSprite, const char* string, int x, int y, double zoom)
 {
     unsigned int index = 0;
     while(string[index] != '\0')
     {
-        SDL_Rect dest;
-        dest.x = x + ((int)index*16);
-        dest.y = y;
-        dest.h = 32;
-        dest.w = 32;
-
         SDL_Rect sourceOfCharSprite = ConvertCharToAlphabetSprite(string[index]);
-        SDL_BlitSurface(alphaNumericSprite, &sourceOfCharSprite, origin, &dest);
+        SDL_Rect dest;
+        dest.x = x + (int)(index*16*zoom);
+        dest.y = y;
+        dest.h = (int)(sourceOfCharSprite.h*zoom);
+        dest.w = (int)(sourceOfCharSprite.h*zoom);
 
+        //SDL_BlitSurface(alphaNumericSprite, &sourceOfCharSprite, origin, &dest);
+        SDL_BlitScaled(alphaNumericSprite, &sourceOfCharSprite, origin, &dest);
         index++;
     }
 }
@@ -60,7 +60,7 @@ unsigned int GetSizeOfStringAccordingAlphabetSprite(const char string[])
 SDL_Window* Arkanoid_LoadNewWindow(int height, int width)
 {
     // Create new window
-    SDL_Window* window = SDL_CreateWindow("Arknoid", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, height, width, SDL_WINDOW_SHOWN);
+    SDL_Window* window = SDL_CreateWindow("Arknoid", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, width, height, SDL_WINDOW_SHOWN);
     if(window == NULL)
     {
         SDL_Log("Error creation of new window : %s \n, Line : %d, File : %s, Function : %s \n", SDL_GetError(), __LINE__, __FILE__, __FUNCTION__);

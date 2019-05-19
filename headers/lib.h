@@ -4,7 +4,7 @@
 #include "./include.h"
 
 
-void Arkanoid_PrintAlphaNumeric(SDL_Surface* origin, SDL_Surface* alphaNumericSprite, const char* string, int x, int y);
+void Arkanoid_PrintAlphaNumeric(SDL_Surface* origin, SDL_Surface* alphaNumericSprite, const char* string, int x, int y, double zoom);
 
 
 SDL_Rect ConvertCharToAlphabetSprite(const char c);
