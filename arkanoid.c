@@ -9,6 +9,7 @@
 #define NUMBER_OF_COLUMN_IN_BRICKS 13
 #define NUMBER_MAX_ROW_IN_BRICKS 20
 
+// j'ai remarqué que tu t'étais trompé mais comme pour les collisions, tu l'utilise je n'ai pas voulu tout cassé ^^. N'hésite pas me corrigé ;)
 #define HEIGHT 420
 #define WIDTH 600
 #define HEIGHT_CENTER HEIGHT/2
@@ -347,7 +348,7 @@ void Arkanoid_ShowBoard(SDL_Window* window, SDL_Surface** surface)
     ship.m_src.w = 64;
     ship.m_src.h = 16;
     ship.m_x = ((*surface)->w/2) - (ship.m_src.w/2);
-    ship.m_y = (*surface)->h - 32;
+    ship.m_y = (*surface)->h - (HEIGHT/8) - 5 ;
     ship.m_vx = 4;
     ship.m_dir = 0;
 
@@ -434,7 +435,6 @@ void Arkanoid_ShowBoard(SDL_Window* window, SDL_Surface** surface)
 
         if (!wallEmpty()){
             Arkanoid_DrawBoard(*surface, advancedSprite, alphabetSprite);
-            printf("Score : %d\n", Score);
             SDL_UpdateWindowSurface(window);
         }
         else {
@@ -620,17 +620,24 @@ Redirection_Quit:
 
 void Arkanoid_DrawBoard(SDL_Surface* surface, SDL_Surface* advancedSprites, SDL_Surface* alphabetSprites)
 {
-    // Fill surface background
-    SDL_Rect position = { 0.0, 0.0, 0.0, 0.0 };
-    for (int j = 0; j < surface->h; j+=64)
+    // Fill surface background of the window in black
+    SDL_FillRect(surface, NULL, 0x00000000);
+
+    // Fill surface background of the game only
+    SDL_Rect position ={ 0.0, 0, 0.0, 0.0 };         // On initialise la position de notre fond sur la fenêtre (un seul background)
+    for (int y = (HEIGHT/8) ; y < (HEIGHT/8)*10 ; y+=64)
     {
-        for (int i = 0; i < surface->w; i += 48)
+        for (int x = 0; x < WIDTH; x += 48) // On prend le poind de depart pour (x)
         {
-            position.x = i;
-            position.y = j;
+            // puis on boucle sur chaque position (qu'on aura calculer avec la taille et la largeur du background )
+            // Pour les afficher les un à la suite des autres.
+            position.x = x;
+            position.y = y;
+
             SDL_BlitSurface(advancedSprites, &rectBackground, surface, &position);
         }
     }
+    // fin du remplissage
 
     // Show level and score
     char level_parsed[5];
@@ -646,6 +653,7 @@ void Arkanoid_DrawBoard(SDL_Surface* surface, SDL_Surface* advancedSprites, SDL_
     int row = 0;
     int column = 0;
     SDL_Rect destGuiBrique = {0,0,0,0};
+
     SDL_Rect destShadow = {0,0,0,0};
     for (int i = 0; i < NUMBER_MAX_OF_BRICKS; i++) {
 
@@ -704,11 +712,8 @@ void Arkanoid_DrawBoard(SDL_Surface* surface, SDL_Surface* advancedSprites, SDL_
 
     SDL_BlitSurface(advancedSprites, &ball.m_src, ball_shadow, &ballPosition);
 
-
-
-    SDL_BlitSurface(ball_shadow, NULL, surface, &ballPosition);
-    //SDL_BlitSurface(advancedSprites, &ball.m_src, surface, &ballPosition);
-
+    //SDL_BlitSurface(ball_shadow, NULL, surface, &ballPosition);
+    SDL_BlitSurface(advancedSprites, &ball.m_src, surface, &ballPosition);
 
     // Define ball position
     if(ball.isLaunch == true)
@@ -721,11 +726,13 @@ void Arkanoid_DrawBoard(SDL_Surface* surface, SDL_Surface* advancedSprites, SDL_
 
 
         // ball collision
-        if ((ball_nextY < ALLOWED_PX) || (ball_nextY+ball.m_src.h > (surface->h)-ALLOWED_PX))
+        if ((ball_nextY < ALLOWED_PX) ||
+                (ball_nextY+ball.m_src.h > (surface->h - (HEIGHT/8)  -ALLOWED_PX)) ||
+                (ball_nextY+ball.m_src.h < (surface->h - ((HEIGHT/8)*10) -ALLOWED_PX)  ))
         {
             ball.m_vy *= -1;
         }
-        else if ((ball_nextX < ALLOWED_PX) || (ball_nextX+ball.m_src.w > (surface->w)-ALLOWED_PX))
+        else if ((ball_nextX < ALLOWED_PX) || (ball_nextX+ball.m_src.w > surface->w-ALLOWED_PX))
         {
             ball.m_vx *= -1;
         }
@@ -747,24 +754,26 @@ void Arkanoid_DrawBoard(SDL_Surface* surface, SDL_Surface* advancedSprites, SDL_
                     {
                         if( (ball.m_x > brick->m_x+brick->m_src.w || ball.m_x < brick->m_x) ){
                             ball.m_vx *= -1;
-                            Score += brick->score;
                         }
 
                         if( (ball.m_y > brick->m_y+brick->m_src.h || ball.m_y < brick->m_y) ){
                             ball.m_vy *= -1;
-                            Score += brick->score;
                         }
 
                         brick->m_health += -1;
 
-                        if(brick->key == BRICK_GOLD || brick->key == BRICK_GRAY)
+                        if( brick->key == BRICK_GOLD ||brick->key == BRICK_GRAY)
                         {
                             r.tab_bricks[index]->m_isShining = true;
                             r.tab_bricks[index]->m_indexShining = 1;
                         }
 
-                        if(brick->m_health <= 0)
-                            r.tab_bricks[index] = NULL;
+                        if(brick->m_health <= 0){
+                            if (brick->key != BRICK_GOLD){
+                                Score += brick->score;
+                                r.tab_bricks[index] = NULL;
+                            }
+                        }
 
                         break;
                     }
@@ -784,4 +793,41 @@ void Arkanoid_DrawBoard(SDL_Surface* surface, SDL_Surface* advancedSprites, SDL_
     position.y = (int) ship.m_y;
 
     SDL_BlitSurface(advancedSprites, &ship.m_src, surface, &position);
+
+    //SDL_BlitSurface(advancedSprites, &src_brick, surface,&position_brick_on_window );
+
 }
+
+
+// Notes sur le fontionnement générale des SDL_Surface et SDL_Rect :
+
+// on vas définir notre nouvelle SDL_Rect (brick) à positionner sur la SDL_Rect "center"
+//SDL_Rect src_brick = {96,0,32,16};
+
+// On défini ensuite la position de notre brick sur la fenetre (en loccurance la SDL_Rect du centre)
+//SDL_Rect position_brick_on_window = {center.x,center.y +10,src_brick.h,src_brick.w};
+
+// En faite la position (la destination de notre birck) sera banaliser par les coordonnée du SDL_Rect "center"
+// On pourras donc afficher notre brick sur la SDL_Rect "center" avec :
+//SDL_BlitSurface(advancedSprites, &src_brick, surface,&position_brick_on_window );
+
+// Il faut voir ça comme des couche de SDL_Rect
+// Couche 1 : c'est notre surface de base (fenêtre de l'application = '*surface = SDL_GetWindowSurface(window);' )
+// Couche 2 : se sera toutes les SDL_Rect qu'on vas positionnée sur la fenêtre
+
+// Ce n'est que de la supérposition de SDL_Rect. C'est comme de la peinture
+// (1)Couche blance : couche de base.
+// (2)Puis on recouvre cette couche par une autre couleur.
+// (3)Puis on recouvre cette nouvelle couche avec une nouvelle couleur sur une zone précise.
+
+// Au final Seul la dernière couche (3) sera visiblee. Tout les zone que la couche (3) ne recouvre pas c'est la couche (2) que l'on veras.
+// Tout se que la couche (2) et (3) ne recouvre pas, c'est la couche 1 qui sera visible.
+
+// Les SDL_Rect ne peuvent être placé que sur des surfaces
+
+// Il faut vraiment voir ça comme des couche de peinture.
+
+// SDL_Blitsurface n'intevient en fait qu'en dernier pour permettre l'affichage de ces différentes couhes ? oui c'est ça
+// On peut surperposé autant de couches de SDL_Rect que l'on veut, il faut juste terminer par l'afficher, un sorte de "vernis"
+
+// C'est comme pour le background. on l'affiche en premier pour afficher le reste par dessus
