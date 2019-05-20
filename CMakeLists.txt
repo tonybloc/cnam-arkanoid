@@ -14,15 +14,14 @@ find_package(SDL2 REQUIRED)
 
 add_executable(${PROJECT_NAME}
     "./arkanoid.c";
+    "./prototypes.h"
     "./headers/ball.h"
     "./headers/ship.h"
-    "./headers/lib.h"
     "./headers/include.h"
     "./headers/gui_brick.h"
     "./headers/round.h"
     "./sources/ball.c"
     "./sources/ship.c"
-    "./sources/lib.c"
     "./sources/gui_brick.c"
     "./sources/round.c"
     )
