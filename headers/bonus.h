@@ -6,9 +6,9 @@
 typedef struct Bonus
 {
     int m_key;
-    int m_x;
-    int m_y;
-    int m_vy;
+    double m_x;
+    double m_y;
+    double m_vy;
     SDL_Rect m_src;
 
 } Bonus;

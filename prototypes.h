@@ -44,4 +44,8 @@ void View_UpdateLevel(SDL_Surface* surface);
 void View_UpdateScore(SDL_Surface* surface);
 void View_UpdateLife(SDL_Surface* surface);
 void View_ClearLife(SDL_Surface* surface);
+
+void SmallShip(Ship* ship);
+void MediumShip(Ship* ship);
+void BigShip(Ship* ship);
 #endif
