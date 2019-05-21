@@ -11,4 +11,5 @@ void initializeBall(Ball* b){
     b->m_src.w = 0;
     b->m_src.x = 0;
     b->m_src.y = 0;
+    b->isSticky = false;
 }

@@ -2,6 +2,7 @@
 #define GUI_BRICK_H
 
 #include "./include.h"
+#include "./bonus.h"
 
 /**
  * @brief The Brick struct
@@ -13,6 +14,7 @@ typedef struct Gui_Brick
     double m_x;
     double m_y;
     SDL_Rect m_src;
+    Bonus* m_bonus;
     bool m_isShining;
     int m_indexShining;
     int score;

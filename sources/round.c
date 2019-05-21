@@ -4,8 +4,18 @@
 #include "./../headers/round.h"
 
 #define NUMBER_MAX_OF_BRICKS 260
+#define SIZE_OF_BONUS_ARRAY 21
+#define BONUS_NONE 'N'
+#define BONUS_SLOWDOWN 'S'
+#define BONUS_CATCHFIRE 'C'
+#define BONUS_EXPAND 'E'
+#define BONUS_DIVIDE 'D'
+#define BONUS_LASERBEAM 'L'
+#define BONUS_BREAK 'B'
+#define BONUS_PLAYERADDITION 'P'
+#define NUMBER_MAX_OF_BALL 3
 
-void initializeRound(Round* r, Ship* s, Ball* b ,char filename[], int l){
+void initializeRound(Round* r, Ship* s, Ball** b ,char filename[], int l){
     Gui_Brick** bricks = readFile(filename, l);
     r->tab_bricks = bricks;
     r->ship = s;
@@ -21,6 +31,18 @@ Gui_Brick** readFile( char filename[], int level){
 
     int i = 0;
     int brickKey = 0;
+    int nbAlea = 0;
+    char tab[SIZE_OF_BONUS_ARRAY] = {
+        BONUS_NONE,BONUS_NONE, BONUS_SLOWDOWN,
+        BONUS_NONE,BONUS_NONE, BONUS_CATCHFIRE,
+        BONUS_NONE,BONUS_NONE, BONUS_EXPAND,
+        BONUS_NONE,BONUS_NONE, BONUS_DIVIDE,
+        BONUS_NONE,BONUS_NONE, BONUS_LASERBEAM,
+        BONUS_NONE,BONUS_NONE, BONUS_BREAK,
+        BONUS_NONE,BONUS_NONE, BONUS_PLAYERADDITION,
+    };
+
+    srand((unsigned int)time(NULL));
 
     // Allocate memory for wall
     Gui_Brick** bricks = malloc(sizeof(Gui_Brick*)*NUMBER_MAX_OF_BRICKS);
@@ -37,6 +59,67 @@ Gui_Brick** readFile( char filename[], int level){
             if(brickKey >= 0 && brickKey <= 13)
             {
                 Gui_Brick* brk = witch(brickKey, level);
+                Bonus* bonus = malloc(sizeof(Bonus));
+                initializeBonus(bonus);
+                nbAlea = rand()%SIZE_OF_BONUS_ARRAY;
+
+                //S,C,L,E,D,B,P
+                switch (tab[nbAlea])
+                {
+                case BONUS_SLOWDOWN:
+                    bonus->m_key = BONUS_SLOWDOWN;
+                    bonus->m_src.x = 256;
+                    bonus->m_src.y = 0;
+                    bonus->m_src.h = 16;
+                    bonus->m_src.w = 32;
+                    break;
+                case BONUS_CATCHFIRE:
+                    bonus->m_key = BONUS_CATCHFIRE;
+                    bonus->m_src.x = 256;
+                    bonus->m_src.y = 16;
+                    bonus->m_src.h = 16;
+                    bonus->m_src.w = 32;
+                    break;
+                case BONUS_LASERBEAM:
+                    bonus->m_key = BONUS_LASERBEAM;
+                    bonus->m_src.x = 256;
+                    bonus->m_src.y = 32;
+                    bonus->m_src.h = 16;
+                    bonus->m_src.w = 32;
+                    break;
+                case BONUS_EXPAND:
+                    bonus->m_key = BONUS_EXPAND;
+                    bonus->m_src.x = 256;
+                    bonus->m_src.y = 48;
+                    bonus->m_src.h = 16;
+                    bonus->m_src.w = 32;
+                    break;
+                case BONUS_DIVIDE:
+                    bonus->m_key = BONUS_DIVIDE;
+                    bonus->m_src.x = 256;
+                    bonus->m_src.y = 64;
+                    bonus->m_src.h = 16;
+                    bonus->m_src.w = 32;
+                    break;
+                case BONUS_BREAK:
+                    bonus->m_key = BONUS_BREAK;
+                    bonus->m_src.x = 256;
+                    bonus->m_src.y = 80;
+                    bonus->m_src.h = 16;
+                    bonus->m_src.w = 32;
+                    break;
+                case BONUS_PLAYERADDITION:
+                    bonus->m_key = BONUS_PLAYERADDITION;
+                    bonus->m_src.x = 256;
+                    bonus->m_src.y = 96;
+                    bonus->m_src.h = 16;
+                    bonus->m_src.w = 32;
+                    break;
+                default:
+                    bonus = NULL;
+                    break;
+                }
+                brk->m_bonus = bonus;
                 bricks[i] = brk;
                 i++;
             }
@@ -180,7 +263,6 @@ Gui_Brick* witch(int n, int level){
     case 12:
         // Brique argenté
         b->key = 12;
-        b->m_health = 2;
         b->m_src.x =0;
         b->m_src.y =32;
         b->m_src.w =32;
@@ -188,6 +270,15 @@ Gui_Brick* witch(int n, int level){
         b->score = 50 * level;
         b->m_isShining = true;
         b->m_indexShining = 0;
+
+        if(level >= 1 && level <= 8)
+            b->m_health = 2;
+        else if(level > 8 && level <= 16)
+            b->m_health = 3;
+        else if(level > 16 && level <= 24)
+            b->m_health = 4;
+        else if(level > 24 && level <= 32)
+            b->m_health = 5;
         break;
     case 13:
         // Brique dorée

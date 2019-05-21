@@ -17,13 +17,13 @@ typedef struct Round
 {
    Gui_Brick** tab_bricks;
    Ship* ship;
-   Ball* ball;
+   Ball** ball;
    int level;
 } Round;
 
 
 // Initialize a round with a
-void initializeRound(Round* r, Ship* s, Ball* b, char filename[], int l);
+void initializeRound(Round* r, Ship* s, Ball** b, char filename[], int l);
 
 //read values in the given file
 Gui_Brick** readFile(char filename[], int l);

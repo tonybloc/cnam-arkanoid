@@ -12,4 +12,5 @@ void initializeGuiBrick(Gui_Brick* b){
     b->m_isShining = false;
     b->m_indexShining = 0;
     b->score = 0;
+    b->m_bonus = NULL;
 }
