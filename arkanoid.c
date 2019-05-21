@@ -12,10 +12,10 @@
 #define HEIGHT_QUARTER HEIGHT/4
 #define WIDTH_QUARTER WIDTH/4
 
-#define MARGIN_PX 2
+#define MARGIN_PX 8
 
-#define BALL_SPEED_X 8
-#define BALL_SPEED_Y 8
+#define BALL_SPEED_X 10
+#define BALL_SPEED_Y 10
 
 #define BRICK_GRAY 12
 #define BRICK_GOLD 13
@@ -383,7 +383,7 @@ void Arkanoid_ShowBoard(SDL_Window* window, SDL_Surface** surface)
                 case SDLK_SPACE :
                     for(int index = 0; index < NUMBER_MAX_OF_BALL; index++)
                         if(round.ball[index] != NULL)
-                            round.ball[index]->isLaunch = 1;
+                            round.ball[index]->isLaunch = true;
 
                     break;
                 default: break;
@@ -565,9 +565,6 @@ void Arkanoid_DrawBoard(SDL_Surface* surface, Round* round)
     /* -- DISPLAY BRICKS WALL -- */
     DisplayWallOfBricks(surface, round, 0, MIN_HEIGH_OF_BOARD );
 
-    //CollisionBonus(surface, G_BonusActive, G_BonusDropping, round->ship);
-
-
 
     /* -- DISPLAY SHIP -- */
     position.x = (int)round->ship->m_x;
@@ -580,41 +577,39 @@ void Arkanoid_DrawBoard(SDL_Surface* surface, Round* round)
     for (int i = 0; i < NUMBER_MAX_OF_BALL; i++) {
         if(round->ball[i] != NULL)
         {
-            position.x = (int)round->ball[i]->m_x;
-            position.y = (int)round->ball[i]->m_y;
-            SDL_BlitSurface(Arkanoid_AdvancedSprite, &round->ball[i]->m_src, surface, &position);
-
             /* -- CHECK COLLISION -- */
-            if(round->ball[i]->isLaunch)
+            if(round->ball[i]->isLaunch == true)
             {
+                SetBallPosition(round->ball[i],
+                                (int)(round->ball[i]->m_x + round->ball[i]->m_vx / G_Delta_t),
+                                (int)(round->ball[i]->m_y + round->ball[i]->m_vy / G_Delta_t)) ;
+
+
 
                 position.x = (int)round->ball[i]->m_x;
                 position.y = (int)round->ball[i]->m_y;
                 SDL_BlitSurface(Arkanoid_AdvancedSprite, &round->ball[i]->m_src, surface, &position);
 
-                SetBallPosition(round->ball[i],
-                                (int)(round->ball[i]->m_x + round->ball[i]->m_vx / G_Delta_t),
-                                (int)(round->ball[i]->m_y + round->ball[i]->m_vy / G_Delta_t)) ;
-
                 // Define variable for simplify reading of code
-                int shipHeight = round->ship->m_src.h;
-                int shipWidth = round->ship->m_src.w;
-                int ballHeight = round->ball[i]->m_src.h;
-                int ballWidth = round->ball[i]->m_src.w;
-                double ballNextY = round->ball[i]->m_y + (round->ball[i]->m_vy / G_Delta_t);
-                double ballNextX = round->ball[i]->m_x + (round->ball[i]->m_vx / G_Delta_t);
+                const int shipHeight = round->ship->m_src.h;
+                const int shipWidth = round->ship->m_src.w;
+                const int ballHeight = round->ball[i]->m_src.h;
+                const int ballWidth = round->ball[i]->m_src.w;
+                const double ballNextY = round->ball[i]->m_y + 2*(round->ball[i]->m_vy / G_Delta_t);
+                const double ballNextX = round->ball[i]->m_x + 2*(round->ball[i]->m_vx / G_Delta_t);
 
 
                 /* -- Check collision with Windows -- */
-                if( ((ballNextY+ballHeight) >= (MAX_HEIGH_OF_BOARD-MARGIN_PX)) || ((ballNextY) <= (MIN_HEIGH_OF_BOARD+MARGIN_PX)) )
+                if( ((ballNextY+ballHeight) > (MAX_HEIGH_OF_BOARD-MARGIN_PX)) || ((ballNextY) < (MIN_HEIGH_OF_BOARD+MARGIN_PX)) )
                 {
                     printf("Colision Y \n");
                     round->ball[i]->m_vy *= -1;
                 }
-                else if( (ballNextX <= MARGIN_PX) || (ballNextX+ballWidth >= WIDTH-MARGIN_PX) )
+                else if( (ballNextX < MARGIN_PX) || (ballNextX+ballWidth > WIDTH-MARGIN_PX) )
                 {
                     printf("Colision X \n");
                     round->ball[i]->m_vx *= -1;
+
                 }
                 else if( ballNextY > round->ship->m_y+shipHeight )
                 {
@@ -632,8 +627,7 @@ void Arkanoid_DrawBoard(SDL_Surface* surface, Round* round)
                 }
 
                 /* -- Check collision with Ship -- */
-                else if ( ((ballNextX+ballWidth) > round->ship->m_x) && (ballNextX < (round->ship->m_x+shipWidth) )
-                         && (ballNextY+ballHeight > round->ship->m_y) )
+                else if ( ((ballNextX+ballWidth) > round->ship->m_x) && (ballNextX < (round->ship->m_x+shipWidth) ) && (ballNextY+ballHeight > round->ship->m_y) )
                 {
 
                     printf("Colision SHIP \n");
@@ -646,24 +640,50 @@ void Arkanoid_DrawBoard(SDL_Surface* surface, Round* round)
                         //round->ball[i]->m_vx = -((ballNextX - round->ship->m_x)/shipWidth);
                         round->ball[i]->m_vx = - (((round->ship->m_x+shipWidth-ballNextX)/(shipWidth/2)) *5);
                     }
-
-                    printf("x%d y%d \n", (int)round->ball[i]->m_vx, (int)round->ball[i]->m_vy);
-                    //round->ball[i]->m_vx = (round->ship->m_dir > 0) ? ((ballNextX - ship->m_x)/(ship->m_src.w/2)*5) : -((ship->m_x+ship->m_src.w -ballNextX)/(ship->m_src.w/2)*5);
-
                 }
-                // Check collision with Ship
-                // Check collision with Bricks
 
-                // Check collisions
-                /*
-                if(CheckBallCollisionWithWindow(round->ball)){}
-                else if(CheckBallCollisionWithShip(round->ball, round->ship)){}
+                /* -- Check collision with Bricks -- */
                 else{
                     for (int index = 0;index < NUMBER_MAX_OF_BRICKS; index++)
-                        if(CheckBallCollisionWithBrick(round->ball, round->tab_bricks[index])) break;
-                }
-                */
+                    {
+                        Gui_Brick* brick = round->tab_bricks[index];
+                        if(brick != NULL)
+                        {
+                            if( ((ballNextX <= brick->m_x+brick->m_src.w) && (ballNextX+ballWidth >= brick->m_x))
+                                    && ( (ballNextY <= brick->m_y+brick->m_src.h) && (ballNextY+ballHeight >= brick->m_y)) )
+                            {
+                                if( (round->ball[i]->m_x+ballWidth > brick->m_x+brick->m_src.w || round->ball[i]->m_x < brick->m_x) ){
+                                    printf("collision brick :  X Left/right \n");
+                                    round->ball[i]->m_vx *= -1;
+                                }
 
+                                if( (round->ball[i]->m_y+ballHeight > brick->m_y+brick->m_src.h || round->ball[i]->m_y < brick->m_y) ){
+                                    printf("collision brick : Y TOP/DOWN \n");
+                                    round->ball[i]->m_vy *= -1;
+                                }
+
+                                // Shine bricks
+                                if( brick->key == BRICK_GOLD || brick->key == BRICK_GRAY)
+                                {
+                                    brick->m_isShining = true;
+                                    brick->m_indexShining = 1;
+                                }
+
+                                // Update brick's health
+                                round->tab_bricks[index]->m_health += (brick->key == BRICK_GOLD) ? 0 : -1;
+
+                                if(brick->m_health <= 0){
+
+                                    G_Score += brick->score;
+                                    View_UpdateScore(surface);
+                                    round->tab_bricks[index] = NULL;
+                                }
+                                break;
+                            }
+                        }
+                    }
+
+                }
 
             }
             else
@@ -705,6 +725,8 @@ Ball* CreateBall(){
     ball->m_y = 0;
     ball->m_vx = BALL_SPEED_X;
     ball->m_vy = BALL_SPEED_Y;
+    ball->isLaunch = false;
+    ball->isSticky = false;
 
     return ball;
 }
