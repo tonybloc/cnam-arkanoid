@@ -14,7 +14,7 @@ void Arkanoid_ShowBoard(SDL_Window* win, SDL_Surface** rend);
 void Arkanoid_ShowAbout(SDL_Window* window, SDL_Surface** surface);
 void Arkanoid_ShowHighScores(SDL_Window* window, SDL_Surface** surface);
 void Arkanoid_DrawBoard(SDL_Surface* surface, Round* round, Laser** lasers);
-
+void Arkanoid_SaveYourScore(SDL_Window* window, SDL_Surface** surface);
 bool WallIsEmpty(Round* round);
 
 // Object creation

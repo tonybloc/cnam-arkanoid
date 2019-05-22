@@ -46,22 +46,27 @@
 #define NUMBER_MAX_OF_BALL 3
 #define NUMBER_MAX_OF_LASER 50
 
+#define NUMBER_TAG_NAME 3
+#define NUMBER_OF_ALPHABET 26
 /* ------------ */
 /*   VARIABLES  */
 /* ------------ */
 
 
 /* Enumeration */
-enum ARKANOID_WINDOW_OPTION { WINDOW_MENU = 1, WINDOW_BOARD = 2, WINDOW_QUIT = 3, WINDOW_SCORES = 4, WINDOW_ABOUT = 5};
+enum ARKANOID_WINDOW_OPTION { WINDOW_MENU = 1, WINDOW_BOARD = 2, WINDOW_QUIT = 3, WINDOW_SCORES = 4, WINDOW_ABOUT = 5, WINDOW_SAVE = 6};
 
 /* Global Variable */
 static int G_Level = 1;
 static int G_Score = 0;
 static int G_Health = 3;
+static bool G_GameOver = false;
 static Bonus* G_BonusDropping = NULL;
 static Bonus* G_BonusActive = NULL;
 static bool G_IsSticky = false;
 static int G_SelectorSelected = 0;
+static int G_SelectorTagName = 0;
+static int G_SelectedChar = ' ';
 static Uint64 G_Prev, G_Now;    // timers
 static double G_Delta_t;      // refresh frame (ms)
 static int G_IntervalTimer = 0;
@@ -69,7 +74,6 @@ static int G_NumberOfBall = 0;
 /* Arkanoid Levels Path */
 static char* G_Level_path = "./public/level_";
 static char* G_Level_path_extension = ".txt";
-
 /* Menu Targeted */
 static enum ARKANOID_WINDOW_OPTION WindowSelected = WINDOW_MENU;
 
@@ -147,6 +151,8 @@ int main(int argc, char* argv[])
         case WINDOW_SCORES:
             Arkanoid_ShowHighScores(Arkanoid_Window, &Arkanoid_Surface);
             break;
+        case WINDOW_SAVE:
+            Arkanoid_SaveYourScore(Arkanoid_Window, &Arkanoid_Surface);
         case WINDOW_QUIT:
             break;
         }
@@ -453,6 +459,12 @@ void Arkanoid_ShowBoard(SDL_Window* window, SDL_Surface** surface)
                 G_Level++;
                 gameIsLauched = false;
             }
+        }
+        if(G_GameOver)
+        {
+            gameIsLauched = false;
+            WindowSelected = WINDOW_SAVE;
+
         }
     }
 
@@ -829,7 +841,8 @@ void Arkanoid_DrawBoard(SDL_Surface* surface, Round* round, Laser** lasers)
                         G_Health -= 1;
                         if(G_Health <= 0){
                             printf("GameOver ! \n");
-                            View_UpdateLife(surface);
+                            G_GameOver = true;
+                            break;
                         }else{
                             round->ball[i]->isLaunch = false;
                             FixBallOnShip(round->ball[i], round->ship);
@@ -933,7 +946,170 @@ void Arkanoid_DrawBoard(SDL_Surface* surface, Round* round, Laser** lasers)
         G_BonusActive = NULL;
     }
 }
+void Arkanoid_SaveYourScore(SDL_Window* window, SDL_Surface** surface)
+{
+    *surface = NULL;
+    *surface = SDL_GetWindowSurface(window);
+    if(surface == NULL)
+    {
+        SDL_Log("Erreur : La Surface n'a pas été récupérée : %s \n", SDL_GetError());
+        SDL_Log("Line : %d, File : %s, Function : %s \n", __LINE__, __FILE__, __FUNCTION__);
+        goto Redirection_Quit ;
+    }
 
+    enum MENU_ITEMS { NEW_GAME = 0, HIGH_SCORES = 1, ABOUT = 2, EXIT = 3 };
+    char* TextAllowed = " ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    SDL_Rect MenuSelectorsPosition[NUMBER_TAG_NAME] = {
+        {(int)(WIDTH_QUARTER)+00, HEIGHT_CENTER+32, 32, 32},
+        {(int)(WIDTH_QUARTER)+32, HEIGHT_CENTER+32, 32, 32},
+        {(int)(WIDTH_QUARTER)+64, HEIGHT_CENTER+32, 32, 32}
+    };
+
+    // Print title of surface
+
+    static char txt_title[40];
+    sprintf(txt_title,"%s%d%s", "Well Play ! You have : ", G_Score, " points");
+
+
+    Arkanoid_PrintAlphaNumeric(*surface, txt_title,
+                               WIDTH_QUARTER,
+                               HEIGHT_QUARTER,
+                               VIEW_SIZE_OF_SPACE_MEDIUM,
+                               VIEW_SIZE_OF_CHAR_LOW);
+
+
+    Arkanoid_PrintAlphaNumeric(*surface, "Entre your tag name : ",
+                               WIDTH_QUARTER,
+                               HEIGHT_CENTER,
+                               VIEW_SIZE_OF_SPACE_MEDIUM,
+                               VIEW_SIZE_OF_CHAR_LOW);
+
+
+    // Display current selector
+    Arkanoid_PrintAlphaNumeric(*surface, "_",
+                               MenuSelectorsPosition[G_SelectorSelected].x,
+                               MenuSelectorsPosition[G_SelectorSelected].y,
+                               VIEW_SIZE_OF_SPACE_MEDIUM,
+                               VIEW_SIZE_OF_CHAR_LOW);
+
+
+    SDL_bool laucher = SDL_TRUE;
+
+    // Events behaviors
+    while(laucher)
+    {
+        SDL_Event event;
+        while(SDL_PollEvent(&event))
+        {
+            switch(event.type)
+            {
+            case SDL_QUIT:
+                laucher = SDL_FALSE;
+                WindowSelected = WINDOW_QUIT;
+                break;
+            case SDL_KEYDOWN:
+                switch (event.key.keysym.sym)
+                {
+                case SDLK_ESCAPE:
+                    laucher = SDL_FALSE;
+                    WindowSelected = WINDOW_QUIT;
+                    break;
+                case SDLK_LEFT:
+                    // Remove old selector
+                    Arkanoid_PrintAlphaNumeric(*surface, " ",
+                                               MenuSelectorsPosition[G_SelectorTagName].x,
+                                               MenuSelectorsPosition[G_SelectorTagName].y,
+                                               VIEW_SIZE_OF_SPACE_MEDIUM,
+                                               VIEW_SIZE_OF_CHAR_LOW);
+
+                    G_SelectorTagName = ((G_SelectorTagName-1) < 0) ? NUMBER_TAG_NAME-1 : (G_SelectorTagName-1);
+
+                    Arkanoid_PrintAlphaNumeric(*surface, "_",
+                                               MenuSelectorsPosition[G_SelectorTagName].x,
+                                               MenuSelectorsPosition[G_SelectorTagName].y,
+                                               VIEW_SIZE_OF_SPACE_MEDIUM,
+                                               VIEW_SIZE_OF_CHAR_LOW);
+
+
+                    break;
+                case SDLK_RIGHT:
+
+                    Arkanoid_PrintAlphaNumeric(*surface, " ",
+                                               MenuSelectorsPosition[G_SelectorTagName].x,
+                                               MenuSelectorsPosition[G_SelectorTagName].y,
+                                               VIEW_SIZE_OF_SPACE_MEDIUM,
+                                               VIEW_SIZE_OF_CHAR_LOW);
+
+                    G_SelectorTagName = ((G_SelectorTagName+1) > NUMBER_TAG_NAME-1) ? 0 : (G_SelectorTagName+1);
+
+                    Arkanoid_PrintAlphaNumeric(*surface, "_",
+                                               MenuSelectorsPosition[G_SelectorTagName].x,
+                                               MenuSelectorsPosition[G_SelectorTagName].y,
+                                               VIEW_SIZE_OF_SPACE_MEDIUM,
+                                               VIEW_SIZE_OF_CHAR_LOW);
+                    break;
+                case SDLK_UP:
+
+
+                    Arkanoid_PrintAlphaNumeric(*surface, " ",
+                                               MenuSelectorsPosition[G_SelectorTagName].x,
+                                               MenuSelectorsPosition[G_SelectorTagName].y,
+                                               VIEW_SIZE_OF_SPACE_MEDIUM,
+                                               VIEW_SIZE_OF_CHAR_LOW);
+
+                    // set new selected index
+                    G_SelectedChar = ((G_SelectedChar-1) < 0) ? NUMBER_OF_ALPHABET-1 : (G_SelectedChar+1);
+
+                    char view_char[1] = {TextAllowed[G_SelectedChar]};
+                    sprintf(view_char, "%c", TextAllowed[G_SelectedChar]);
+
+                    Arkanoid_PrintAlphaNumeric(*surface, view_char,
+                                               MenuSelectorsPosition[G_SelectorTagName].x,
+                                               MenuSelectorsPosition[G_SelectorTagName].y,
+                                               VIEW_SIZE_OF_SPACE_MEDIUM,
+                                               VIEW_SIZE_OF_CHAR_LOW);
+                    break;
+                case SDLK_DOWN:
+
+                    Arkanoid_PrintAlphaNumeric(*surface, " ",
+                                               MenuSelectorsPosition[G_SelectorTagName].x,
+                                               MenuSelectorsPosition[G_SelectorTagName].y,
+                                               VIEW_SIZE_OF_SPACE_MEDIUM,
+                                               VIEW_SIZE_OF_CHAR_LOW);
+
+                    G_SelectedChar = ((G_SelectedChar-1) > NUMBER_OF_ALPHABET-1) ? 0 :(G_SelectedChar+1);
+
+
+                    char view_cha2r[1] = {TextAllowed[G_SelectedChar]};
+                    sprintf(view_cha2r, "%c", TextAllowed[G_SelectedChar]);
+
+                    Arkanoid_PrintAlphaNumeric(*surface, view_cha2r,
+                                               MenuSelectorsPosition[G_SelectorTagName].x,
+                                               MenuSelectorsPosition[G_SelectorTagName].y,
+                                               VIEW_SIZE_OF_SPACE_MEDIUM,
+                                               VIEW_SIZE_OF_CHAR_LOW);
+                    break;
+                case SDLK_RETURN:
+                   // Save in file
+                default:
+                    break;
+                }
+                break;
+            default:
+                break;
+            }
+            SDL_UpdateWindowSurface(window);
+
+
+        }
+    }
+
+Redirection_Quit:
+    SDL_FillRect(*surface, NULL, 0x000000);
+    SDL_FreeSurface(*surface);
+
+
+}
 bool WallIsEmpty(Round* round)
 {
     int cpt = 0;
