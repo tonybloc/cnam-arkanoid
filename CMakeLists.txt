@@ -34,6 +34,8 @@ target_sources(${PROJECT_NAME} PUBLIC arkanoid.c)
 target_include_directories(${PROJECT_NAME} PUBLIC ${SDL2_INCLUDE_DIRS})
 target_link_libraries(${PROJECT_NAME} PUBLIC ${SDL2_LIBRARIES})
 
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/public/scores.txt
+    DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/public)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/public/sprites.bmp
     DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/public)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/public/Arkanoid_sprites.bmp

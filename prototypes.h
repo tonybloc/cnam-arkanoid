@@ -50,4 +50,7 @@ void View_ClearLife(SDL_Surface* surface);
 void SmallShip(Ship* ship);
 void MediumShip(Ship* ship);
 void BigShip(Ship* ship);
+
+void SlowBall(Round* round);
+void IncreaseBall(Round* round);
 #endif

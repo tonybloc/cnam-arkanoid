@@ -1,5 +1,6 @@
 #include "./prototypes.h"
 #include <stdio.h>
+#include <stdlib.h>
 
 #define NUMBER_MAX_OF_BRICKS 260
 #define NUMBER_OF_COLUMN_IN_BRICKS 13
@@ -47,7 +48,7 @@
 #define NUMBER_MAX_OF_LASER 50
 
 #define NUMBER_TAG_NAME 3
-#define NUMBER_OF_ALPHABET 26
+#define NUMBER_OF_ALPHABET 27
 /* ------------ */
 /*   VARIABLES  */
 /* ------------ */
@@ -66,7 +67,7 @@ static Bonus* G_BonusActive = NULL;
 static bool G_IsSticky = false;
 static int G_SelectorSelected = 0;
 static int G_SelectorTagName = 0;
-static int G_SelectedChar = ' ';
+static int G_SelectedChar = 0;
 static Uint64 G_Prev, G_Now;    // timers
 static double G_Delta_t;      // refresh frame (ms)
 static int G_IntervalTimer = 0;
@@ -74,6 +75,7 @@ static int G_NumberOfBall = 0;
 /* Arkanoid Levels Path */
 static char* G_Level_path = "./public/level_";
 static char* G_Level_path_extension = ".txt";
+static FILE* fichier = NULL;
 /* Menu Targeted */
 static enum ARKANOID_WINDOW_OPTION WindowSelected = WINDOW_MENU;
 
@@ -565,6 +567,24 @@ void Arkanoid_ShowHighScores(SDL_Window* window, SDL_Surface** surface)
 
     SDL_bool laucher = SDL_TRUE;
 
+    /*
+    // Open file
+    FILE* fichier = fopen("./public/scores.txt", "r");
+
+
+    char** paragraphe = malloc(sizeof (char*)*200);
+
+    // If we can open the file
+    if (fichier != NULL)
+    {
+        char* text;
+        size_t read;
+        while( read = getLinfscanf(fichier, "%s", text) !=EOF)
+        {
+
+        }
+    }*/
+
     // Events
     while(laucher)
     {
@@ -644,9 +664,8 @@ void Arkanoid_DrawBoard(SDL_Surface* surface, Round* round, Laser** lasers)
     if(G_BonusDropping != NULL)
     {
         if(G_IntervalTimer == 1)
-        {
             G_BonusDropping->m_src.x += (G_BonusDropping->m_src.x < 512)? 32 : -256;
-        }
+
         G_BonusDropping->m_y += 1;
         SDL_Rect destBonus = {(int)G_BonusDropping->m_x, (int)G_BonusDropping->m_y, 0,0};
         SDL_BlitSurface(Arkanoid_AdvancedSprite, &G_BonusDropping->m_src, surface, &destBonus);
@@ -667,20 +686,24 @@ void Arkanoid_DrawBoard(SDL_Surface* surface, Round* round, Laser** lasers)
             G_NumberOfBall = 0;
             switch(G_BonusActive->m_key){
             case BONUS_SLOWDOWN:
-                SDL_Delay(20);
+                SlowBall(round);
                 MediumShip(round->ship);
                 break;
             case BONUS_CATCHFIRE:
+                IncreaseBall(round);
                 G_IsSticky = true;
                 MediumShip(round->ship);
                 break;
             case BONUS_LASERBEAM:
+                IncreaseBall(round);
                 MediumShip(round->ship);
                 break;
             case BONUS_EXPAND:
+                IncreaseBall(round);
                 BigShip(round->ship);
                 break;
             case BONUS_DIVIDE:
+                IncreaseBall(round);
                 for (int index = 0;index < NUMBER_MAX_OF_BALL; index ++) {
                     if(round->ball[index] != NULL)
                     {
@@ -697,8 +720,8 @@ void Arkanoid_DrawBoard(SDL_Surface* surface, Round* round, Laser** lasers)
                         round->ball[index] = CreateBall();
                         round->ball[index]->m_x = OriginX;
                         round->ball[index]->m_y = OriginY;
-                        round->ball[index]->m_vx = OriginVx+(OriginVx*coef[index])*2;
-                        round->ball[index]->m_vy = OriginVy;
+                        //round->ball[index]->m_vx = OriginVx;//+(OriginVx*coef[index])*2;
+                        //round->ball[index]->m_vy = OriginVy;
                         round->ball[index]->isLaunch = true;
                     }
                 }
@@ -711,10 +734,12 @@ void Arkanoid_DrawBoard(SDL_Surface* surface, Round* round, Laser** lasers)
 
                 break;
             case BONUS_BREAK:
+                IncreaseBall(round);
                 MediumShip(round->ship);
                 // Next level
                 break;
             case BONUS_PLAYERADDITION:
+                IncreaseBall(round);
                 MediumShip(round->ship);
                 G_Health +=1;
                 View_UpdateLife(surface);
@@ -873,16 +898,11 @@ void Arkanoid_DrawBoard(SDL_Surface* surface, Round* round, Laser** lasers)
                         round->ball[i]->m_hookX = round->ball[i]->m_x - round->ship->m_x;
                         continue;
                     }else{
-                    //if(G_IsSticky)
-                    //{
-                    //    continue;
-                    //}
-                    //else{
+
                         round->ball[i]->m_vy *= -1;
 
                         if( round->ship->m_dir > 0 ){
-                            //round->ball[i]->m_vx = ((ballNextX-round->ship->m_x)/(shipWidth/2)) *5;
-                            round->ball[i]->m_vx = (((round->ship->m_x+shipWidth-ballNextX)/(shipWidth/2)) *5);
+                            round->ball[i]->m_vx = ((ballNextX-round->ship->m_x)/(shipWidth/2)) *5;
                         }else{
                             round->ball[i]->m_vx = - (((round->ship->m_x+shipWidth-ballNextX)/(shipWidth/2)) *5);
                         }
@@ -969,6 +989,8 @@ void Arkanoid_SaveYourScore(SDL_Window* window, SDL_Surface** surface)
         goto Redirection_Quit ;
     }
 
+    char* text_scores_to_write = malloc(sizeof(char)*50);
+
     enum MENU_ITEMS { NEW_GAME = 0, HIGH_SCORES = 1, ABOUT = 2, EXIT = 3 };
     char* TextAllowed = " ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     SDL_Rect MenuSelectorsPosition[NUMBER_TAG_NAME] = {
@@ -1029,7 +1051,6 @@ void Arkanoid_SaveYourScore(SDL_Window* window, SDL_Surface** surface)
                 case SDLK_LEFT:
                     // Remove old selector
 
-
                     G_SelectorTagName = ((G_SelectorTagName-1) < 0) ? NUMBER_TAG_NAME-1 : (G_SelectorTagName-1);
 
                     Arkanoid_PrintAlphaNumeric(*surface, "_",
@@ -1050,20 +1071,20 @@ void Arkanoid_SaveYourScore(SDL_Window* window, SDL_Surface** surface)
                                                MenuSelectorsPosition[G_SelectorTagName].y,
                                                VIEW_SIZE_OF_SPACE_MEDIUM,
                                                VIEW_SIZE_OF_CHAR_LOW);
+
                     break;
                 case SDLK_UP:
 
-
-                    Arkanoid_PrintAlphaNumeric(*surface, " ",
+                    Arkanoid_PrintAlphaNumeric(*surface, "_",
                                                MenuSelectorsPosition[G_SelectorTagName].x,
                                                MenuSelectorsPosition[G_SelectorTagName].y,
                                                VIEW_SIZE_OF_SPACE_MEDIUM,
                                                VIEW_SIZE_OF_CHAR_LOW);
 
                     // set new selected index
-                    G_SelectedChar = ((G_SelectedChar-1) < 0) ? NUMBER_OF_ALPHABET-1 : (G_SelectedChar+1);
+                    G_SelectedChar = ((G_SelectedChar-1) < 0) ? NUMBER_OF_ALPHABET-1 : (G_SelectedChar-1);
 
-                    char view_char[1] = {TextAllowed[G_SelectedChar]};
+                    char view_char[1];
                     sprintf(view_char, "%c", TextAllowed[G_SelectedChar]);
 
                     Arkanoid_PrintAlphaNumeric(*surface, view_char,
@@ -1071,29 +1092,58 @@ void Arkanoid_SaveYourScore(SDL_Window* window, SDL_Surface** surface)
                                                MenuSelectorsPosition[G_SelectorTagName].y,
                                                VIEW_SIZE_OF_SPACE_MEDIUM,
                                                VIEW_SIZE_OF_CHAR_LOW);
+
+                    text_scores_to_write[G_SelectorTagName] = view_char[0];
                     break;
                 case SDLK_DOWN:
 
-                    Arkanoid_PrintAlphaNumeric(*surface, " ",
+                    Arkanoid_PrintAlphaNumeric(*surface, "_",
                                                MenuSelectorsPosition[G_SelectorTagName].x,
                                                MenuSelectorsPosition[G_SelectorTagName].y,
                                                VIEW_SIZE_OF_SPACE_MEDIUM,
                                                VIEW_SIZE_OF_CHAR_LOW);
 
-                    G_SelectedChar = ((G_SelectedChar-1) > NUMBER_OF_ALPHABET-1) ? 0 :(G_SelectedChar+1);
+
+                    G_SelectedChar = ((G_SelectedChar+1) > NUMBER_OF_ALPHABET-1) ? 0 :(G_SelectedChar+1);
 
 
-                    char view_cha2r[1] = {TextAllowed[G_SelectedChar]};
-                    sprintf(view_cha2r, "%c", TextAllowed[G_SelectedChar]);
+                    char view_char2[1];
+                    sprintf(view_char2, "%c", TextAllowed[G_SelectedChar]);
 
-                    Arkanoid_PrintAlphaNumeric(*surface, view_cha2r,
+                    Arkanoid_PrintAlphaNumeric(*surface, view_char2,
                                                MenuSelectorsPosition[G_SelectorTagName].x,
                                                MenuSelectorsPosition[G_SelectorTagName].y,
                                                VIEW_SIZE_OF_SPACE_MEDIUM,
                                                VIEW_SIZE_OF_CHAR_LOW);
+
+                    text_scores_to_write[G_SelectorTagName] = view_char[0];
                     break;
                 case SDLK_RETURN:
-                   // Save in file
+
+                    // Open file
+                    fichier = fopen("./public/scores.txt", "a+");
+                    // If we can open the file
+                    if (fichier != NULL)
+                    {
+                        static char text_to_write[200] = {0};
+
+                       sprintf(text_to_write,"%s......%d\n", text_scores_to_write, G_Score);
+
+                       printf("%s", text_to_write);
+                       fputs(text_to_write, fichier);
+                       fclose(fichier);
+                    }else
+                    {
+                        printf("Imposible d'ouvrir le fichier !");
+                    }
+
+                    printf(" ENTER ! \n");
+                    laucher = SDL_FALSE;
+                    G_GameOver = false;
+                    G_Health = 3;
+                    WindowSelected = WINDOW_MENU;
+                    break;
+
                 default:
                     break;
                 }
@@ -1379,4 +1429,27 @@ void BigShip(Ship* ship){
     ship->m_src.w = 128;
     ship->m_src.h = 16;
 
+}
+
+void SlowBall(Round* round)
+{
+    for(int index = 0; index < NUMBER_MAX_OF_BALL; index++)
+    {
+        if(round->ball[index] != NULL)
+        {
+            round->ball[index]->m_vy *= 0.5;
+            round->ball[index]->m_vx *= 0.5;
+        }
+    }
+}
+void IncreaseBall(Round* round)
+{
+    for(int index = 0; index < NUMBER_MAX_OF_BALL; index++)
+    {
+        if(round->ball[index] != NULL)
+        {
+            round->ball[index]->m_vy = 10;
+            round->ball[index]->m_vx = 10;
+        }
+    }
 }
