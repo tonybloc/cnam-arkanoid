@@ -638,6 +638,8 @@ void Arkanoid_DrawBoard(SDL_Surface* surface, Round* round, Laser** lasers)
     position.w = 0;
     SDL_BlitSurface(Arkanoid_AdvancedSprite, &round->ship->m_src, surface, &position);
 
+
+
     /* -- DISPLAY BONUS -- */
     if(G_BonusDropping != NULL)
     {
@@ -715,6 +717,7 @@ void Arkanoid_DrawBoard(SDL_Surface* surface, Round* round, Laser** lasers)
             case BONUS_PLAYERADDITION:
                 MediumShip(round->ship);
                 G_Health +=1;
+                View_UpdateLife(surface);
                 break;
             default:
                 break;
@@ -795,8 +798,15 @@ void Arkanoid_DrawBoard(SDL_Surface* surface, Round* round, Laser** lasers)
 
     /* -- DISPLAY BALLS -- */
     for (int i = 0; i < NUMBER_MAX_OF_BALL; i++) {
+
         if(round->ball[i] != NULL)
         {
+            position.x = (int)round->ball[i]->m_x;
+            position.y = (int)round->ball[i]->m_y;
+            position.h = 0;
+            position.w = 0;
+            SDL_BlitSurface(Arkanoid_AdvancedSprite, &round->ball[i]->m_src, surface, &position);
+
             /* -- CHECK COLLISION -- */
             if(round->ball[i]->isLaunch == true || G_NumberOfBall > 1)
             {
@@ -856,11 +866,18 @@ void Arkanoid_DrawBoard(SDL_Surface* surface, Round* round, Laser** lasers)
                 else if ( ((ballNextX+ballWidth) > round->ship->m_x) && (ballNextX < (round->ship->m_x+shipWidth) ) && (ballNextY+ballHeight > round->ship->m_y) )
                 {
 
-                    if(G_IsSticky)
+                    if(G_BonusActive != NULL && G_BonusActive->m_key == BONUS_CATCHFIRE && G_IsSticky)
                     {
+                        round->ball[i]->isSticky = true;
+                        round->ball[i]->m_y = round->ship->m_y-round->ship->m_src.h;
+                        round->ball[i]->m_hookX = round->ball[i]->m_x - round->ship->m_x;
                         continue;
-                    }
-                    else{
+                    }else{
+                    //if(G_IsSticky)
+                    //{
+                    //    continue;
+                    //}
+                    //else{
                         round->ball[i]->m_vy *= -1;
 
                         if( round->ship->m_dir > 0 ){
@@ -870,12 +887,7 @@ void Arkanoid_DrawBoard(SDL_Surface* surface, Round* round, Laser** lasers)
                             round->ball[i]->m_vx = - (((round->ship->m_x+shipWidth-ballNextX)/(shipWidth/2)) *5);
                         }
 
-                        if(G_BonusActive != NULL && G_BonusActive->m_key == BONUS_CATCHFIRE)
-                        {
-                            round->ball[i]->isSticky = true;
-                            round->ball[i]->m_y = round->ship->m_y-round->ship->m_src.h;
-                            round->ball[i]->m_hookX = round->ball[i]->m_x - round->ship->m_x;
-                        }
+
                     }
 
                 }
@@ -928,7 +940,7 @@ void Arkanoid_DrawBoard(SDL_Surface* surface, Round* round, Laser** lasers)
                     }
                 }
             }
-            else if(G_BonusActive != NULL && G_BonusActive->m_key == BONUS_CATCHFIRE)
+            else if(G_BonusActive != NULL && G_BonusActive->m_key == BONUS_CATCHFIRE && G_IsSticky)
             {
                 SetBallPosition(round->ball[i],
                                 (int)(round->ship->m_x + round->ball[i]->m_hookX),
@@ -1016,11 +1028,7 @@ void Arkanoid_SaveYourScore(SDL_Window* window, SDL_Surface** surface)
                     break;
                 case SDLK_LEFT:
                     // Remove old selector
-                    Arkanoid_PrintAlphaNumeric(*surface, " ",
-                                               MenuSelectorsPosition[G_SelectorTagName].x,
-                                               MenuSelectorsPosition[G_SelectorTagName].y,
-                                               VIEW_SIZE_OF_SPACE_MEDIUM,
-                                               VIEW_SIZE_OF_CHAR_LOW);
+
 
                     G_SelectorTagName = ((G_SelectorTagName-1) < 0) ? NUMBER_TAG_NAME-1 : (G_SelectorTagName-1);
 
@@ -1034,11 +1042,6 @@ void Arkanoid_SaveYourScore(SDL_Window* window, SDL_Surface** surface)
                     break;
                 case SDLK_RIGHT:
 
-                    Arkanoid_PrintAlphaNumeric(*surface, " ",
-                                               MenuSelectorsPosition[G_SelectorTagName].x,
-                                               MenuSelectorsPosition[G_SelectorTagName].y,
-                                               VIEW_SIZE_OF_SPACE_MEDIUM,
-                                               VIEW_SIZE_OF_CHAR_LOW);
 
                     G_SelectorTagName = ((G_SelectorTagName+1) > NUMBER_TAG_NAME-1) ? 0 : (G_SelectorTagName+1);
 
