@@ -419,15 +419,24 @@ void Arkanoid_ShowBoard(SDL_Window* window, SDL_Surface** surface)
         G_Now = SDL_GetPerformanceCounter();
         G_Delta_t = (double)( (G_Now-G_Prev) * 1000 / SDL_GetPerformanceFrequency());
 
-        if (!WallIsEmpty(&round)){
 
+        if( G_BonusActive != NULL && G_BonusActive->m_key == BONUS_BREAK)
+        {
+            G_BonusActive = NULL;
+
+            if (G_Level < 36){
+                G_Level++;
+                gameIsLauched = false;
+            }
+        }
+        else if (!WallIsEmpty(&round)){
             Arkanoid_DrawBoard(*surface, &round, Lasers);
             SDL_UpdateWindowSurface(window);
         }
         else {
             if (G_Level < 36){
                 G_Level++;
-                break;
+                gameIsLauched = false;
             }
         }
     }
@@ -571,7 +580,6 @@ Redirection_Quit:
 }
 void Arkanoid_DrawBoard(SDL_Surface* surface, Round* round, Laser** lasers)
 {
-
 
     /* -- DISPLAY BACKGROUND -- */
 
