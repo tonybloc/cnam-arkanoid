@@ -1,6 +1,6 @@
 # Arkanoid
 
-##Introduction
+## Introduction
 
 Arkanoid est un casse brique développé en binôme dans le cadre du module de programmation en C au CNAM. Le jeu a été développé en C 
 et l'interface graphique a été géré à l'aide de la librairie SDL 1.2.
@@ -25,7 +25,7 @@ Vous prendrez en compte la vitesse (horizontale) du vaisseau pour changer la dir
 Options: deux joueurs, ombres, traces derrière la balle, disparition progressive des briques.
 distribution bonus/malus non aléatoire, etc ...
 
-##Présentation du rendu
+## Présentation du rendu
 
 [Présentation](https://cfaiformation-my.sharepoint.com/:p:/g/personal/ctreser_cfai-formation_fr/EfpzKUaow_dJrNUPeu-gz20B7u5K_woibFyhfsBVlUBAIQ?e=6vxv49)
 
