@@ -60,10 +60,12 @@ static int G_Score = 0;
 static int G_Health = 3;
 static Bonus* G_BonusDropping = NULL;
 static Bonus* G_BonusActive = NULL;
+static bool G_IsSticky = false;
 static int G_SelectorSelected = 0;
 static Uint64 G_Prev, G_Now;    // timers
 static double G_Delta_t;      // refresh frame (ms)
 static int G_IntervalTimer = 0;
+static int G_NumberOfBall = 0;
 /* Arkanoid Levels Path */
 static char* G_Level_path = "./public/level_";
 static char* G_Level_path_extension = ".txt";
@@ -389,14 +391,12 @@ void Arkanoid_ShowBoard(SDL_Window* window, SDL_Surface** surface)
                     WindowSelected = WINDOW_MENU;
                     break;
                 case SDLK_SPACE :
-                    printf("Press Espace \n ");
                     for(int index = 0; index < NUMBER_MAX_OF_BALL; index++)
                         if(round.ball[index] != NULL)
                             round.ball[index]->isLaunch = true;
 
                     if( G_BonusActive != NULL && G_BonusActive->m_key == BONUS_LASERBEAM)
                     {
-                        printf("Update Lasers \n");
                         int count = 0;
                         for(int index = 0; (index<NUMBER_MAX_OF_LASER) && (count != 2); index++)
                         {
@@ -408,6 +408,21 @@ void Arkanoid_ShowBoard(SDL_Window* window, SDL_Surface** surface)
                             }
                         }
                     }
+
+
+                    if(G_BonusActive != NULL && G_BonusActive->m_key == BONUS_CATCHFIRE)
+                    {
+                        G_IsSticky = false;
+                        for(int index = 0; index < NUMBER_MAX_OF_BALL; index++)
+                        {
+                            if(round.ball[index] != NULL)
+                            {
+                                round.ball[index]->m_hookX = -1;
+                                round.ball[index]->isSticky = false;
+                            }
+                        }
+                    }
+
                     break;
                 default: break;
                 }
@@ -635,13 +650,14 @@ void Arkanoid_DrawBoard(SDL_Surface* surface, Round* round, Laser** lasers)
             double OriginVy = 0;
             double coef[NUMBER_MAX_OF_BALL];
 
-            int nbBalls = 0;
+            G_NumberOfBall = 0;
             switch(G_BonusActive->m_key){
             case BONUS_SLOWDOWN:
                 SDL_Delay(20);
                 MediumShip(round->ship);
                 break;
             case BONUS_CATCHFIRE:
+                G_IsSticky = true;
                 MediumShip(round->ship);
                 break;
             case BONUS_LASERBEAM:
@@ -667,17 +683,17 @@ void Arkanoid_DrawBoard(SDL_Surface* surface, Round* round, Laser** lasers)
                         round->ball[index] = CreateBall();
                         round->ball[index]->m_x = OriginX;
                         round->ball[index]->m_y = OriginY;
-                        round->ball[index]->m_vx = OriginVx+(OriginVx*coef[index])*1.5;
+                        round->ball[index]->m_vx = OriginVx+(OriginVx*coef[index])*2;
                         round->ball[index]->m_vy = OriginVy;
+                        round->ball[index]->isLaunch = true;
                     }
                 }
 
                 for (int index = 0; index <NUMBER_MAX_OF_BALL; index++) {
                     if(round->ball[index] != NULL)
-                        nbBalls++;
+                        G_NumberOfBall++;
                 };
 
-                printf("Nombre de balles : %d", nbBalls);
 
                 break;
             case BONUS_BREAK:
@@ -766,18 +782,15 @@ void Arkanoid_DrawBoard(SDL_Surface* surface, Round* round, Laser** lasers)
     }
 
     /* -- DISPLAY BALLS -- */
-    int numberOfBalls = 0;
     for (int i = 0; i < NUMBER_MAX_OF_BALL; i++) {
         if(round->ball[i] != NULL)
         {
-            numberOfBalls++;
             /* -- CHECK COLLISION -- */
-            if(round->ball[i]->isLaunch == true)
+            if(round->ball[i]->isLaunch == true || G_NumberOfBall > 1)
             {
                 SetBallPosition(round->ball[i],
                                 (int)(round->ball[i]->m_x + round->ball[i]->m_vx / G_Delta_t),
                                 (int)(round->ball[i]->m_y + round->ball[i]->m_vy / G_Delta_t)) ;
-
 
 
                 position.x = (int)round->ball[i]->m_x;
@@ -805,29 +818,53 @@ void Arkanoid_DrawBoard(SDL_Surface* surface, Round* round, Laser** lasers)
                 }
                 else if( ballNextY > round->ship->m_y+shipHeight )
                 {
-                    View_ClearLife(surface);
-                    G_Health -= 1;
-                    if(G_Health <= 0){
-                        printf("GameOver ! \n");
-                        View_UpdateLife(surface);
-                    }else{
-                        round->ball[i]->isLaunch = false;
-                        FixBallOnShip(round->ball[i], round->ship);
-                        View_UpdateLife(surface);
+                    if(G_NumberOfBall > 1)
+                    {
+                        round->ball[i] = NULL;
+                        G_NumberOfBall -= 1;
+                        continue;
                     }
+                    else{
+                        View_ClearLife(surface);
+                        G_Health -= 1;
+                        if(G_Health <= 0){
+                            printf("GameOver ! \n");
+                            View_UpdateLife(surface);
+                        }else{
+                            round->ball[i]->isLaunch = false;
+                            FixBallOnShip(round->ball[i], round->ship);
+                            View_UpdateLife(surface);
+                        }
+                    }
+
                 }
 
                 /* -- Check collision with Ship -- */
                 else if ( ((ballNextX+ballWidth) > round->ship->m_x) && (ballNextX < (round->ship->m_x+shipWidth) ) && (ballNextY+ballHeight > round->ship->m_y) )
                 {
-                    round->ball[i]->m_vy *= -1;
 
-                    if( round->ship->m_dir > 0 ){
-                        round->ball[i]->m_vx = ((ballNextX-round->ship->m_x)/(shipWidth/2)) *5;
-                        //round->ball[i]->m_vx = - (((round->ship->m_x+shipWidth-ballNextX)/(shipWidth/2)) *5);
-                    }else{
-                        round->ball[i]->m_vx = - (((round->ship->m_x+shipWidth-ballNextX)/(shipWidth/2)) *5);
+                    if(G_IsSticky)
+                    {
+                        continue;
                     }
+                    else{
+                        round->ball[i]->m_vy *= -1;
+
+                        if( round->ship->m_dir > 0 ){
+                            //round->ball[i]->m_vx = ((ballNextX-round->ship->m_x)/(shipWidth/2)) *5;
+                            round->ball[i]->m_vx = (((round->ship->m_x+shipWidth-ballNextX)/(shipWidth/2)) *5);
+                        }else{
+                            round->ball[i]->m_vx = - (((round->ship->m_x+shipWidth-ballNextX)/(shipWidth/2)) *5);
+                        }
+
+                        if(G_BonusActive != NULL && G_BonusActive->m_key == BONUS_CATCHFIRE)
+                        {
+                            round->ball[i]->isSticky = true;
+                            round->ball[i]->m_y = round->ship->m_y-round->ship->m_src.h;
+                            round->ball[i]->m_hookX = round->ball[i]->m_x - round->ship->m_x;
+                        }
+                    }
+
                 }
 
                 /* -- Check collision with Bricks -- */
@@ -876,9 +913,13 @@ void Arkanoid_DrawBoard(SDL_Surface* surface, Round* round, Laser** lasers)
                             }
                         }
                     }
-
                 }
-
+            }
+            else if(G_BonusActive != NULL && G_BonusActive->m_key == BONUS_CATCHFIRE)
+            {
+                SetBallPosition(round->ball[i],
+                                (int)(round->ship->m_x + round->ball[i]->m_hookX),
+                                (int)(round->ball[i]->m_y));
             }
             else
             {
@@ -887,7 +928,7 @@ void Arkanoid_DrawBoard(SDL_Surface* surface, Round* round, Laser** lasers)
         }
     }
 
-    if(numberOfBalls <= 1 && G_BonusActive != NULL && G_BonusActive == BONUS_DIVIDE)
+    if(G_NumberOfBall <= 1 && G_BonusActive != NULL && G_BonusActive->m_key == BONUS_DIVIDE)
     {
         G_BonusActive = NULL;
     }

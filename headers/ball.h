@@ -14,6 +14,7 @@ typedef struct Ball{
     double m_vx;
     double m_vy;
     bool isSticky;
+    double m_hookX;
     SDL_Rect m_src;
 } Ball;
 
