@@ -344,7 +344,7 @@ void Arkanoid_ShowBoard(SDL_Window* window, SDL_Surface** surface)
 
 
     // Initialize Lasers
-    SDL_Rect** Lasers = malloc(sizeof(SDL_Rect*)*NUMBER_MAX_OF_LASER);
+    Laser** Lasers = malloc(sizeof(Laser*)*NUMBER_MAX_OF_LASER);
     for (int index = 0 ; index < NUMBER_MAX_OF_LASER; index++)
         Lasers[index] = NULL;
 
@@ -357,7 +357,7 @@ void Arkanoid_ShowBoard(SDL_Window* window, SDL_Surface** surface)
         SDL_Event event;
         while(SDL_PollEvent(&event))
         {
-            ship.m_dir = 1;
+            round.ship->m_dir = 1;
             switch(event.type)
             {
             case SDL_QUIT:
@@ -389,19 +389,29 @@ void Arkanoid_ShowBoard(SDL_Window* window, SDL_Surface** surface)
                     WindowSelected = WINDOW_MENU;
                     break;
                 case SDLK_SPACE :
+                    printf("Press Espace \n ");
                     for(int index = 0; index < NUMBER_MAX_OF_BALL; index++)
                         if(round.ball[index] != NULL)
                             round.ball[index]->isLaunch = true;
 
-                    if(G_BonusActive->m_key == BONUS_LASERBEAM)
+                    if( G_BonusActive != NULL && G_BonusActive->m_key == BONUS_LASERBEAM)
                     {
-                        //CreateLaser()
+                        printf("Update Lasers \n");
+                        int count = 0;
+                        for(int index = 0; (index<NUMBER_MAX_OF_LASER) && (count != 2); index++)
+                        {
+                            if(Lasers[index] == NULL)
+                            {
+                                Lasers[index] = (count == 1) ? CreateLaser((int)(round.ship->m_x+round.ship->m_src.w/2-16), (int)ship.m_y) : CreateLaser((int)(round.ship->m_x+round.ship->m_src.w/2+16), (int)ship.m_y);
+                                //SDL_Delay(10);
+                                count++;
+                            }
+                        }
                     }
                     break;
                 default: break;
                 }
                 break;
-
             }
         }
         G_IntervalTimer = (G_IntervalTimer+1) % 3;
@@ -410,7 +420,8 @@ void Arkanoid_ShowBoard(SDL_Window* window, SDL_Surface** surface)
         G_Delta_t = (double)( (G_Now-G_Prev) * 1000 / SDL_GetPerformanceFrequency());
 
         if (!WallIsEmpty(&round)){
-            Arkanoid_DrawBoard(*surface, &round);
+
+            Arkanoid_DrawBoard(*surface, &round, Lasers);
             SDL_UpdateWindowSurface(window);
         }
         else {
@@ -423,6 +434,10 @@ void Arkanoid_ShowBoard(SDL_Window* window, SDL_Surface** surface)
 
 Redirection_Quit:
     // free memory of round
+    for(int index = 0; index < NUMBER_MAX_OF_LASER; index++)
+        free(Lasers[index]);
+
+
     for (int index = 0; index < NUMBER_MAX_OF_BRICKS;index++)
         free(round.tab_bricks[index]);
 
@@ -554,7 +569,7 @@ Redirection_Quit:
     SDL_FillRect(*surface, NULL, 0x000000);
     SDL_FreeSurface(*surface);
 }
-void Arkanoid_DrawBoard(SDL_Surface* surface, Round* round)
+void Arkanoid_DrawBoard(SDL_Surface* surface, Round* round, Laser** lasers)
 {
 
 
@@ -569,6 +584,8 @@ void Arkanoid_DrawBoard(SDL_Surface* surface, Round* round)
             SDL_Rect source = Arkanoid_Backgrounds[(G_Level-1)%NUMBER_OF_BACKGROUD];
             position.x = x;
             position.y = y;
+            position.h = 0;
+            position.w = 0;
             source.h = (MAX_HEIGH_OF_BOARD-y >= 64) ? 64 : (MAX_HEIGH_OF_BOARD-y);
             source.w = ((G_Level-1)%NUMBER_OF_BACKGROUD==0)?48:64;
             SDL_BlitSurface(Arkanoid_AdvancedSprite, &source, surface, &position);
@@ -582,6 +599,8 @@ void Arkanoid_DrawBoard(SDL_Surface* surface, Round* round)
     /* -- DISPLAY SHIP -- */
     position.x = (int)round->ship->m_x;
     position.y = (int)round->ship->m_y;
+    position.h = 0;
+    position.w = 0;
     SDL_BlitSurface(Arkanoid_AdvancedSprite, &round->ship->m_src, surface, &position);
 
     /* -- DISPLAY BONUS -- */
@@ -594,9 +613,6 @@ void Arkanoid_DrawBoard(SDL_Surface* surface, Round* round)
         G_BonusDropping->m_y += 1;
         SDL_Rect destBonus = {(int)G_BonusDropping->m_x, (int)G_BonusDropping->m_y, 0,0};
         SDL_BlitSurface(Arkanoid_AdvancedSprite, &G_BonusDropping->m_src, surface, &destBonus);
-
-
-
 
         if( (G_BonusDropping->m_x+G_BonusDropping->m_src.w >= round->ship->m_x) && (G_BonusDropping->m_x <= round->ship->m_x + round->ship->m_src.w)
                 && (G_BonusDropping->m_y+G_BonusDropping->m_src.h >= round->ship->m_y))
@@ -633,10 +649,77 @@ void Arkanoid_DrawBoard(SDL_Surface* surface, Round* round)
                 break;
             }
         }
-        else if(G_BonusDropping->m_y > MAX_HEIGH_OF_BOARD){
+        else if(G_BonusDropping->m_y+G_BonusDropping->m_src.h > MAX_HEIGH_OF_BOARD){
             G_BonusDropping = NULL;
         }
+    }
 
+    /* -- DISPLAY LASERS -- */
+    for(int index = 0; index < NUMBER_MAX_OF_LASER; index++)
+    {
+        if(lasers[index] != NULL)
+        {
+            lasers[index]->m_y -= 2;
+            if(lasers[index]->m_y < MIN_HEIGH_OF_BOARD)
+            {
+                lasers[index] = NULL;
+            }
+            else{
+                position.x = (int)lasers[index]->m_x;
+                position.y = (int)lasers[index]->m_y;
+                position.w = (int)(lasers[index]->m_src.w*0.6);
+                position.h = (int)(lasers[index]->m_src.h*0.6);
+                SDL_BlitScaled(Arkanoid_AdvancedSprite, &lasers[index]->m_src, surface, &position);
+
+
+                /* Collision with brick */
+                for (int j = 0; j < NUMBER_MAX_OF_BRICKS; j++)
+                {
+                    Gui_Brick* brick = round->tab_bricks[j];
+                    if(brick != NULL)
+                    {
+
+                        if( (lasers[index]->m_x <= brick->m_x+brick->m_src.w) && (lasers[index]->m_x+lasers[index]->m_src.w >= brick->m_x)
+                                && (lasers[index]->m_y <= brick->m_y+brick->m_src.h) && (lasers[index]->m_y+lasers[index]->m_src.h >= brick->m_y))
+                        {
+
+                            // Shine bricks
+                            if( brick->key == BRICK_GOLD || brick->key == BRICK_GRAY)
+                            {
+                                brick->m_isShining = true;
+                                brick->m_indexShining = 1;
+                            }
+
+                            // Update brick's health
+                            round->tab_bricks[j]->m_health += (brick->key == BRICK_GOLD) ? 0 : -1;
+
+                            if(brick->m_health <= 0)
+                            {
+                                G_Score += brick->score;
+
+                                // release bonus
+                                if( (brick->m_bonus != NULL) && (G_BonusDropping == NULL) )
+                                {
+                                    G_BonusDropping = brick->m_bonus;
+                                    G_BonusDropping->m_y = brick->m_y;
+                                    G_BonusDropping->m_x = brick->m_x;
+                                }
+                                View_UpdateScore(surface);
+                                round->tab_bricks[j] = NULL;
+                            }
+
+                            lasers[index] = NULL;
+                            break;
+                        }
+
+                    }
+                }
+
+            }
+
+
+
+        }
     }
 
     /* -- DISPLAY BALLS -- */
@@ -673,13 +756,10 @@ void Arkanoid_DrawBoard(SDL_Surface* surface, Round* round)
                 }
                 else if( (ballNextX < MARGIN_PX) || (ballNextX+ballWidth > WIDTH-MARGIN_PX) )
                 {
-                    printf("Colision X \n");
                     round->ball[i]->m_vx *= -1;
-
                 }
                 else if( ballNextY > round->ship->m_y+shipHeight )
                 {
-                    printf("Colision DEAD \n");
                     View_ClearLife(surface);
                     G_Health -= 1;
                     if(G_Health <= 0){
@@ -695,15 +775,11 @@ void Arkanoid_DrawBoard(SDL_Surface* surface, Round* round)
                 /* -- Check collision with Ship -- */
                 else if ( ((ballNextX+ballWidth) > round->ship->m_x) && (ballNextX < (round->ship->m_x+shipWidth) ) && (ballNextY+ballHeight > round->ship->m_y) )
                 {
-
-                    printf("Colision SHIP \n");
                     round->ball[i]->m_vy *= -1;
 
                     if( round->ship->m_dir > 0 ){
-                        //round->ball[i]->m_vx = (ballNextX - round->ship->m_x)/shipWidth;
                         round->ball[i]->m_vx = ((ballNextX-round->ship->m_x)/(shipWidth/2)) *5;
                     }else{
-                        //round->ball[i]->m_vx = -((ballNextX - round->ship->m_x)/shipWidth);
                         round->ball[i]->m_vx = - (((round->ship->m_x+shipWidth-ballNextX)/(shipWidth/2)) *5);
                     }
                 }
@@ -719,12 +795,10 @@ void Arkanoid_DrawBoard(SDL_Surface* surface, Round* round)
                                     && ( (ballNextY <= brick->m_y+brick->m_src.h) && (ballNextY+ballHeight >= brick->m_y)) )
                             {
                                 if( (round->ball[i]->m_x+ballWidth > brick->m_x+brick->m_src.w || round->ball[i]->m_x < brick->m_x) ){
-                                    printf("collision brick :  X Left/right \n");
                                     round->ball[i]->m_vx *= -1;
                                 }
 
                                 if( (round->ball[i]->m_y+ballHeight > brick->m_y+brick->m_src.h || round->ball[i]->m_y < brick->m_y) ){
-                                    printf("collision brick : Y TOP/DOWN \n");
                                     round->ball[i]->m_vy *= -1;
                                 }
 
@@ -770,22 +844,17 @@ void Arkanoid_DrawBoard(SDL_Surface* surface, Round* round)
 
 bool WallIsEmpty(Round* round)
 {
-    bool empty = false;
-    int cpt =0;
+    int cpt = 0;
 
     for (int i = 0; i < NUMBER_MAX_OF_BRICKS; i++)
     {
-        if((round->tab_bricks[i]) == NULL)
+        if((round->tab_bricks[i]) != NULL && round->tab_bricks[i]->key != BRICK_GOLD)
         {
             cpt++;
+            break;
         }
     }
-
-    if (cpt == NUMBER_MAX_OF_BRICKS)
-        empty = true;
-
-    return empty;
-}
+    return (cpt == 0);}
 
 Ball* CreateBall(){
     Ball* ball = malloc(sizeof (Ball));
@@ -841,6 +910,20 @@ SDL_Rect CreateRect(int x, int y, int w, int h){
 
     return rect;
 }
+Laser* CreateLaser(int x, int y)
+{
+    Laser* laser = malloc(sizeof(Laser));
+    laser->m_src.h = 48;
+    laser->m_src.w = 16;
+    laser->m_src.x = 0;
+    laser->m_src.y = 80;
+    laser->m_x = x;
+    laser->m_y = y;
+
+    return laser;
+}
+
+
 void SetShipPosition(Ship* s, int x, int y)
 {
     s->m_x = x;

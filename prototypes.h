@@ -6,13 +6,14 @@
 #include "./headers/round.h"
 #include "./headers/bonus.h"
 #include "./headers/include.h"
+#include "./headers/laser.h"
 
 // Menus
 void Arkanoid_ShowMenu(SDL_Window* win, SDL_Surface** rend);
 void Arkanoid_ShowBoard(SDL_Window* win, SDL_Surface** rend);
 void Arkanoid_ShowAbout(SDL_Window* window, SDL_Surface** surface);
 void Arkanoid_ShowHighScores(SDL_Window* window, SDL_Surface** surface);
-void Arkanoid_DrawBoard(SDL_Surface* surface, Round* round);
+void Arkanoid_DrawBoard(SDL_Surface* surface, Round* round, Laser** lasers);
 
 bool WallIsEmpty(Round* round);
 
@@ -21,6 +22,7 @@ Ball* CreateBall(void);
 Ship CreateShip(void);
 SDL_Rect CreateRect(int x, int y, int w, int h);
 Round CreateRound(Ship* s, Ball** b , int level);
+Laser* CreateLaser(int x, int y);
 
 // Position setters
 void SetShipPosition(Ship* s, int x, int y);
